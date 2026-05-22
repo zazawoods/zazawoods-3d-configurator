@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="de">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,15 +7,15 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #F1ECE2;
+    --bg: #F4F4F4;
     --bg-card: #FFFFFF;
-    --header: #9CA08F;
-    --text: #1F1A12;
-    --text-muted: #7A6E5B;
-    --accent: #D8956A;
-    --accent-soft: #FBEFE4;
-    --border: #E1D9CB;
-    --shadow: 0 1px 2px rgba(0,0,0,0.04);
+    --header: #111111;
+    --text: #111111;
+    --text-muted: #8A8A8A;
+    --accent: #111111;
+    --accent-soft: #ECECEC;
+    --border: #E2E2E2;
+    --shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
   html, body { height: 100%; }
   body {
@@ -53,14 +53,46 @@
     cursor: pointer; box-shadow: var(--shadow);
     transition: background .15s;
   }
-  .icon-round:hover { background: #FBEFE4; }
+  .icon-round:hover { background: #F0F0F0; }
   .icon-round svg { width: 16px; height: 16px; stroke: var(--text); fill: none; stroke-width: 1.6; }
   .toast {
     position: absolute; top: 70px; left: 50%; transform: translate(-50%, -20px);
-    background: #1F1A12; color: #fff; padding: 8px 16px; border-radius: 20px;
+    background: #111111; color: #fff; padding: 8px 16px; border-radius: 20px;
     font-size: 13px; opacity: 0; transition: all .25s ease; pointer-events: none; z-index: 10;
   }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* Language selector */
+  .lang-select { position: absolute; top: 16px; right: 16px; z-index: 7; }
+  .lang-btn {
+    display: flex; align-items: center; gap: 7px;
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 9px; cursor: pointer; box-shadow: var(--shadow);
+  }
+  .lang-btn:hover { background: #F0F0F0; }
+  .flag {
+    width: 24px; height: 16px; border-radius: 2px; overflow: hidden;
+    display: block; flex: none; border: 1px solid rgba(0,0,0,.08);
+  }
+  .flag svg { display: block; width: 100%; height: 100%; }
+  .lang-caret {
+    width: 12px; height: 12px; stroke: var(--text); fill: none; stroke-width: 2.2;
+    transition: transform .2s;
+  }
+  .lang-select.open .lang-caret { transform: rotate(180deg); }
+  .lang-menu {
+    position: absolute; top: calc(100% + 6px); right: 0;
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.12); overflow: hidden;
+    display: none; min-width: 168px;
+  }
+  .lang-select.open .lang-menu { display: block; }
+  .lang-opt {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 13px; cursor: pointer; font-size: 13px; color: var(--text);
+  }
+  .lang-opt:hover { background: #F0F0F0; }
+  .lang-opt.active { background: var(--accent-soft); font-weight: 600; }
 
   /* Loader */
   .loader {
@@ -93,13 +125,13 @@
     display: flex; align-items: center; gap: 12px;
     padding: 12px 14px; cursor: pointer;
   }
-  .acc-head:hover { background: #FBF7EF; }
+  .acc-head:hover { background: #F7F7F7; }
   .acc-icon {
     width: 40px; height: 40px; border-radius: 50%;
-    background: #F5F1E8; display:flex; align-items:center; justify-content:center; flex: none;
+    background: #EFEFEF; display:flex; align-items:center; justify-content:center; flex: none;
   }
   .acc-icon svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 1.5; }
-  .acc-icon.wood { background: linear-gradient(135deg, #D2A571, #A87340); }
+  .acc-icon.wood { background: linear-gradient(135deg, #D0D0D0, #9C9C9C); }
   .acc-title { flex: 1; }
   .acc-title b { font-size: 14px; font-weight: 600; display: block; }
   .acc-title span { font-size: 12px; color: var(--text-muted); }
@@ -195,7 +227,7 @@
     display: flex; align-items: center; justify-content: center; gap: 8px;
     transition: background .15s, transform .08s;
   }
-  .cta:hover { background: #C77F52; }
+  .cta:hover { background: #000000; }
   .cta:active { transform: scale(.99); }
   .cta svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 1.8; }
 
@@ -215,27 +247,37 @@
   <!-- Viewer -->
   <div class="viewer">
     <canvas id="canvas"></canvas>
+
+    <!-- Language selector -->
+    <div class="lang-select" id="lang-select">
+      <button class="lang-btn" id="lang-btn" type="button" aria-label="Language">
+        <span class="flag" id="lang-flag"></span>
+        <svg class="lang-caret" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="lang-menu" id="lang-menu"></div>
+    </div>
+
     <div class="viewer-actions-bl">
-      <div class="icon-round" id="btn-save" title="Opslaan">
+      <div class="icon-round" id="btn-save" data-i18n-title="btnSave" title="Speichern">
         <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
       </div>
-      <div class="icon-round" id="btn-share" title="Deel link">
+      <div class="icon-round" id="btn-share" data-i18n-title="btnShare" title="Link teilen">
         <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
       </div>
     </div>
     <div class="dim-pill" id="dim-pill">200 × 90 × 76 cm</div>
     <div class="viewer-actions-br">
-      <div class="icon-round" id="btn-screenshot" title="Screenshot">
+      <div class="icon-round" id="btn-screenshot" data-i18n-title="btnScreenshot" title="Screenshot">
         <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
       </div>
-      <div class="icon-round" id="btn-reset" title="Reset view">
+      <div class="icon-round" id="btn-reset" data-i18n-title="btnReset" title="Ansicht zurücksetzen">
         <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
       </div>
     </div>
     <div class="toast" id="toast"></div>
     <div class="loader" id="loader">
       <div class="loader-bar"><div class="loader-bar-inner" id="bar"></div></div>
-      <div class="loader-text" id="loader-text">3D-model laden…</div>
+      <div class="loader-text" id="loader-text" data-i18n="loading3d">3D-Modell wird geladen…</div>
     </div>
   </div>
 
@@ -249,7 +291,7 @@
           <div class="acc-icon">
             <svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v8M19 10v8M3 18h18M6 6l3 4M18 6l-3 4"/></svg>
           </div>
-          <div class="acc-title"><b>Model</b><span id="sub-set">Modern Set</span></div>
+          <div class="acc-title"><b data-i18n="model">Modell</b><span id="sub-set">Modern Set</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="acc-body">
@@ -263,11 +305,11 @@
           <div class="acc-icon">
             <svg viewBox="0 0 24 24"><path d="M3 8h18v8H3z"/><path d="M7 12v2M11 11v3M15 12v2M19 11v3"/></svg>
           </div>
-          <div class="acc-title"><b>Afmeting</b><span id="sub-length">200 × 90 × 76 cm</span></div>
+          <div class="acc-title"><b data-i18n="dimensions">Abmessung</b><span id="sub-length">200 × 90 × 76 cm</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="acc-body">
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;letter-spacing:.5px;">LENGTE</div>
+          <div data-i18n="length" style="font-size:11px;color:var(--text-muted);margin-bottom:8px;letter-spacing:.5px;">LÄNGE</div>
           <div class="chips" id="length-chips"></div>
         </div>
       </div>
@@ -278,7 +320,7 @@
           <div class="acc-icon">
             <svg viewBox="0 0 24 24"><path d="M6 4l12 16M18 4L6 20M6 4h12M6 20h12"/></svg>
           </div>
-          <div class="acc-title"><b>Onderstel</b><span id="sub-leg">Xmodern</span></div>
+          <div class="acc-title"><b data-i18n="base">Untergestell</b><span id="sub-leg">X Modern</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="acc-body">
@@ -290,7 +332,7 @@
       <div class="acc" data-acc="finish">
         <div class="acc-head" style="cursor:default">
           <div class="acc-icon wood"></div>
-          <div class="acc-title"><b>Materiaal</b><span>Douglas · Natural</span></div>
+          <div class="acc-title"><b data-i18n="material">Material</b><span data-i18n="materialValue">Douglas · Natur</span></div>
         </div>
       </div>
 
@@ -300,13 +342,13 @@
           <div class="acc-icon">
             <svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
           </div>
-          <div class="acc-title"><b>Componenten</b><span id="sub-comp">Tafel + Banken</span></div>
+          <div class="acc-title"><b data-i18n="components">Komponenten</b><span id="sub-comp">Tisch + Bänke</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="acc-body">
-          <div class="tog-row" id="row-table"><span class="tog-label">Tafel</span><div class="tog on" data-comp="table"></div></div>
-          <div class="tog-row" id="row-bench"><span class="tog-label">Banken</span><div class="tog on" data-comp="bench"></div></div>
-          <div class="tog-row" id="row-backrest"><span class="tog-label">Rugleuning</span><div class="tog on" data-comp="backrest"></div></div>
+          <div class="tog-row" id="row-table"><span class="tog-label" data-i18n="table">Tisch</span><div class="tog on" data-comp="table"></div></div>
+          <div class="tog-row" id="row-bench"><span class="tog-label" data-i18n="benches">Bänke</span><div class="tog on" data-comp="bench"></div></div>
+          <div class="tog-row" id="row-backrest"><span class="tog-label" data-i18n="backrest">Rückenlehne</span><div class="tog on" data-comp="backrest"></div></div>
         </div>
       </div>
 
@@ -314,17 +356,17 @@
 
     <div class="panel-foot">
       <div class="overzicht">
-        <div class="overzicht-h">OVERZICHT</div>
-        <div class="overzicht-l1" id="ov-l1">Modern Set · Douglas Natural</div>
+        <div class="overzicht-h" data-i18n="summary">ÜBERSICHT</div>
+        <div class="overzicht-l1" id="ov-l1">Modern Set · Douglas Natur</div>
         <div class="overzicht-l2" id="ov-l2">200 × 90 × 76 cm</div>
       </div>
       <div class="total-row">
-        <span class="lbl">Totaalbedrag:</span>
+        <span class="lbl" data-i18n="total">Gesamtbetrag:</span>
         <span class="val" id="price">€ 1.249</span>
       </div>
-      <div class="ship">Gratis Levering &amp; Montage</div>
+      <div class="ship" data-i18n="freeDelivery">Kostenlose Lieferung &amp; Montage</div>
       <button class="cta" id="cta">
-        Voeg toe aan winkelwagen
+        <span data-i18n="addToCart">In den Warenkorb</span>
         <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
       </button>
     </div>
@@ -424,9 +466,66 @@ const SETS = {
 
 const SET_ORDER = ['modern', 'angle', 'x', 'picknick'];
 
-const LEG_LABELS = {
-  Xmodern: 'X Modern', Aframe: 'A-Frame', butterfly: 'Butterfly',
-  diagonalpole: 'Diagonaal', Ushape: 'U-Vorm', Xshape: 'X-Klassiek'
+// ============================ I18N ============================
+const I18N = {
+  de: {
+    model: 'Modell', dimensions: 'Abmessung', base: 'Untergestell',
+    material: 'Material', materialValue: 'Douglas · Natur', components: 'Komponenten',
+    length: 'LÄNGE', table: 'Tisch', benches: 'Bänke', backrest: 'Rückenlehne',
+    summary: 'ÜBERSICHT', total: 'Gesamtbetrag:',
+    freeDelivery: 'Kostenlose Lieferung & Montage', addToCart: 'In den Warenkorb',
+    loading3d: '3D-Modell wird geladen…', loadingSet: ' wird geladen…',
+    loadError: 'Fehler beim Laden — bitte später erneut versuchen.',
+    toastScreenshot: 'Screenshot gespeichert', toastSaved: 'Konfiguration gespeichert: ',
+    toastLink: 'Link kopiert', toastAdded: 'Hinzugefügt: ',
+    btnSave: 'Speichern', btnShare: 'Link teilen', btnScreenshot: 'Screenshot',
+    btnReset: 'Ansicht zurücksetzen', langName: 'Deutsch',
+    legLabels: { Xmodern: 'X Modern', Aframe: 'A-Rahmen', butterfly: 'Schmetterling', diagonalpole: 'Diagonal', Ushape: 'U-Form', Xshape: 'X-Form' }
+  },
+  nl: {
+    model: 'Model', dimensions: 'Afmeting', base: 'Onderstel',
+    material: 'Materiaal', materialValue: 'Douglas · Natural', components: 'Componenten',
+    length: 'LENGTE', table: 'Tafel', benches: 'Banken', backrest: 'Rugleuning',
+    summary: 'OVERZICHT', total: 'Totaalbedrag:',
+    freeDelivery: 'Gratis Levering & Montage', addToCart: 'Voeg toe aan winkelwagen',
+    loading3d: '3D-model laden…', loadingSet: ' laden…',
+    loadError: 'Fout bij laden — probeer het later opnieuw.',
+    toastScreenshot: 'Screenshot opgeslagen', toastSaved: 'Configuratie opgeslagen: ',
+    toastLink: 'Link gekopieerd', toastAdded: 'Toegevoegd: ',
+    btnSave: 'Opslaan', btnShare: 'Deel link', btnScreenshot: 'Screenshot',
+    btnReset: 'Weergave resetten', langName: 'Nederlands',
+    legLabels: { Xmodern: 'X Modern', Aframe: 'A-Frame', butterfly: 'Vlinder', diagonalpole: 'Diagonaal', Ushape: 'U-Vorm', Xshape: 'X-Klassiek' }
+  },
+  en: {
+    model: 'Model', dimensions: 'Dimensions', base: 'Base',
+    material: 'Material', materialValue: 'Douglas · Natural', components: 'Components',
+    length: 'LENGTH', table: 'Table', benches: 'Benches', backrest: 'Backrest',
+    summary: 'SUMMARY', total: 'Total:',
+    freeDelivery: 'Free Delivery & Assembly', addToCart: 'Add to cart',
+    loading3d: 'Loading 3D model…', loadingSet: ' loading…',
+    loadError: 'Loading error — please try again later.',
+    toastScreenshot: 'Screenshot saved', toastSaved: 'Configuration saved: ',
+    toastLink: 'Link copied', toastAdded: 'Added: ',
+    btnSave: 'Save', btnShare: 'Share link', btnScreenshot: 'Screenshot',
+    btnReset: 'Reset view', langName: 'English',
+    legLabels: { Xmodern: 'X Modern', Aframe: 'A-Frame', butterfly: 'Butterfly', diagonalpole: 'Diagonal', Ushape: 'U-Shape', Xshape: 'X-Classic' }
+  }
+};
+const LANG_ORDER = ['de', 'nl', 'en'];
+function t(k) {
+  return (I18N[state.lang] && I18N[state.lang][k] != null) ? I18N[state.lang][k]
+       : (I18N.de[k] != null ? I18N.de[k] : k);
+}
+function legLabel(g) {
+  const L = I18N[state.lang] && I18N[state.lang].legLabels;
+  return (L && L[g]) || g;
+}
+
+// Compact inline SVG flags — render everywhere, no emoji dependency.
+const FLAGS = {
+  de: '<svg viewBox="0 0 5 3" preserveAspectRatio="none"><rect width="5" height="3" fill="#000"/><rect y="1" width="5" height="1" fill="#DD0000"/><rect y="2" width="5" height="1" fill="#FFCE00"/></svg>',
+  nl: '<svg viewBox="0 0 9 6" preserveAspectRatio="none"><rect width="9" height="6" fill="#fff"/><rect width="9" height="2" fill="#AE1C28"/><rect y="4" width="9" height="2" fill="#21468B"/></svg>',
+  en: '<svg viewBox="0 0 60 30" preserveAspectRatio="none"><rect width="60" height="30" fill="#012169"/><path d="M0,0 60,30 M60,0 0,30" stroke="#fff" stroke-width="6"/><path d="M0,0 60,30 M60,0 0,30" stroke="#C8102E" stroke-width="4"/><path d="M30,0 V30 M0,15 H60" stroke="#fff" stroke-width="10"/><path d="M30,0 V30 M0,15 H60" stroke="#C8102E" stroke-width="6"/></svg>'
 };
 const LEG_ICONS = {
   Xmodern:      '<svg viewBox="0 0 30 30"><path d="M6 6l18 18M24 6L6 24"/></svg>',
@@ -443,6 +542,7 @@ const state = {
   set: 'modern',
   length: 200,
   leg: 'Xmodern',
+  lang: 'de',
   components: { table: true, bench: true, backrest: true }
 };
 
@@ -595,7 +695,7 @@ function loadSet(key) {
     const bar = document.getElementById('bar');
     const txt = document.getElementById('loader-text');
     document.getElementById('loader').classList.remove('hidden');
-    txt.textContent = `${cfg.name} laden…`;
+    txt.textContent = cfg.name + t('loadingSet');
     bar.style.width = '0%';
 
     const handle = gltf => {
@@ -631,7 +731,7 @@ async function setActiveSet(setKey) {
   try {
     root = await loadSet(setKey);
   } catch (err) {
-    document.getElementById('loader-text').textContent = 'Fout bij laden — gebruik een lokale webserver om GLB-bestanden te kunnen lezen.';
+    document.getElementById('loader-text').textContent = t('loadError');
     console.error(err);
     return;
   }
@@ -782,7 +882,7 @@ function buildLegGrid() {
   cfg.legStyles.groups.forEach(g => {
     const card = document.createElement('div');
     card.className = 'opt-card' + (g === state.leg ? ' active' : '');
-    card.innerHTML = `<div class="opt-ic">${LEG_ICONS[g]}</div><div class="opt-name">${LEG_LABELS[g]}</div>`;
+    card.innerHTML = `<div class="opt-ic">${LEG_ICONS[g]}</div><div class="opt-name">${legLabel(g)}</div>`;
     card.addEventListener('click', () => {
       state.leg = g;
       buildLegGrid();
@@ -833,26 +933,26 @@ document.getElementById('btn-screenshot').addEventListener('click', () => {
   link.download = `${state.set}_${state.length}cm.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
-  showToast('Screenshot opgeslagen');
+  showToast(t('toastScreenshot'));
 });
 document.getElementById('btn-save').addEventListener('click', () => {
   const summary = `${SETS[state.set].name} · ${state.length} cm`;
-  showToast('Configuratie opgeslagen: ' + summary);
+  showToast(t('toastSaved') + summary);
 });
 document.getElementById('btn-share').addEventListener('click', () => {
   if (navigator.clipboard) navigator.clipboard.writeText(location.href);
-  showToast('Link gekopieerd');
+  showToast(t('toastLink'));
 });
 document.getElementById('cta').addEventListener('click', () => {
-  showToast(`Toegevoegd: ${SETS[state.set].name} ${state.length} cm`);
+  showToast(`${t('toastAdded')}${SETS[state.set].name} ${state.length} cm`);
 });
 
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(t._tid);
-  t._tid = setTimeout(() => t.classList.remove('show'), 1800);
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._tid);
+  el._tid = setTimeout(() => el.classList.remove('show'), 1800);
 }
 
 // ============================ UI sync ============================
@@ -861,25 +961,25 @@ function updateUI() {
 
   document.getElementById('sub-set').textContent = cfg.name;
   document.getElementById('sub-length').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`;
-  document.getElementById('sub-leg').textContent = LEG_LABELS[state.leg] || state.leg;
+  document.getElementById('sub-leg').textContent = legLabel(state.leg);
 
   const comp = [];
-  if (state.components.table) comp.push('Tafel');
-  if (state.components.bench) comp.push('Banken');
-  if (cfg.hasBackrest && state.components.backrest) comp.push('Rugleuning');
+  if (state.components.table) comp.push(t('table'));
+  if (state.components.bench) comp.push(t('benches'));
+  if (cfg.hasBackrest && state.components.backrest) comp.push(t('backrest'));
   document.getElementById('sub-comp').textContent = comp.join(' + ') || '—';
 
   document.getElementById('dim-pill').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`;
-  document.getElementById('ov-l1').textContent = `${cfg.name} · Douglas Natural`;
+  document.getElementById('ov-l1').textContent = `${cfg.name} · ${t('materialValue')}`;
   document.getElementById('ov-l2').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm` +
-    (cfg.legStyles ? `  ·  ${LEG_LABELS[state.leg]}` : '');
+    (cfg.legStyles ? `  ·  ${legLabel(state.leg)}` : '');
 
   const price = Math.round(cfg.basePrice + (state.length - cfg.lengths[0]) * cfg.pricePerCm);
   document.getElementById('price').textContent = '€ ' + price.toLocaleString('nl-NL');
 
   // URL state
   const params = new URLSearchParams({
-    set: state.set, length: state.length, leg: state.leg,
+    set: state.set, length: state.length, leg: state.leg, lang: state.lang,
     table: state.components.table ? 1 : 0,
     bench: state.components.bench ? 1 : 0,
     backrest: state.components.backrest ? 1 : 0
@@ -903,6 +1003,8 @@ function updateUI() {
     const validLegs = (SETS.picknick.legStyles && SETS.picknick.legStyles.groups) || [];
     if (validLegs.includes(qp.get('leg'))) state.leg = qp.get('leg');
   }
+  // Language (default: German)
+  if (qp.has('lang') && I18N[qp.get('lang')]) state.lang = qp.get('lang');
   ['table', 'bench', 'backrest'].forEach(c => { if (qp.has(c)) state.components[c] = qp.get(c) === '1'; });
   // For non-separable sets, table & bench are always on regardless of URL params
   if (!cfg.separable) {
@@ -911,11 +1013,55 @@ function updateUI() {
   }
 })();
 
-// Initial UI build
+// ============================ Language selector ============================
+function updateLangButton() {
+  document.getElementById('lang-flag').innerHTML = FLAGS[state.lang] || FLAGS.de;
+}
+function buildLangMenu() {
+  const menu = document.getElementById('lang-menu');
+  menu.innerHTML = '';
+  LANG_ORDER.forEach(l => {
+    const opt = document.createElement('div');
+    opt.className = 'lang-opt' + (l === state.lang ? ' active' : '');
+    opt.innerHTML = `<span class="flag">${FLAGS[l]}</span><span>${I18N[l].langName}</span>`;
+    opt.addEventListener('click', e => {
+      e.stopPropagation();
+      state.lang = l;
+      document.getElementById('lang-select').classList.remove('open');
+      applyLang();
+    });
+    menu.appendChild(opt);
+  });
+}
+function applyLang() {
+  const dict = I18N[state.lang] || I18N.de;
+  document.documentElement.lang = state.lang;
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.dataset.i18n;
+    if (dict[k] != null) el.textContent = dict[k];
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => {
+    const k = el.dataset.i18nTitle;
+    if (dict[k] != null) el.title = dict[k];
+  });
+  buildLegGrid();
+  updateComponentRows();
+  buildLangMenu();
+  updateLangButton();
+  updateUI();
+}
+document.getElementById('lang-btn').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('lang-select').classList.toggle('open');
+});
+document.addEventListener('click', () => {
+  document.getElementById('lang-select').classList.remove('open');
+});
+
+// ============================ Boot ============================
 buildSetGrid();
 buildLengthChips();
-buildLegGrid();
-updateComponentRows();
+applyLang();   // sets all text + builds leg grid, component rows, language menu/button
 
 // Wait for the embedded wood fallback texture to be ready before loading any
 // model, so material repair has something to substitute in.
