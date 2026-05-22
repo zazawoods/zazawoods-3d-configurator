@@ -131,7 +131,7 @@
     background: #EFEFEF; display:flex; align-items:center; justify-content:center; flex: none;
   }
   .acc-icon svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 1.5; }
-  .acc-icon.wood { background: linear-gradient(135deg, #D0D0D0, #9C9C9C); }
+  .acc-icon.wood { background: linear-gradient(135deg, #D8A06A, #9C6A3C); }
   .acc-title { flex: 1; }
   .acc-title b { font-size: 14px; font-weight: 600; display: block; }
   .acc-title span { font-size: 12px; color: var(--text-muted); }
@@ -332,7 +332,7 @@
       <div class="acc" data-acc="finish">
         <div class="acc-head" style="cursor:default">
           <div class="acc-icon wood"></div>
-          <div class="acc-title"><b data-i18n="material">Material</b><span data-i18n="materialValue">Douglas · Natur</span></div>
+          <div class="acc-title"><b data-i18n="material">Material</b><span data-i18n="materialValue">Douglasienholz</span></div>
         </div>
       </div>
 
@@ -362,7 +362,7 @@
       </div>
       <div class="total-row">
         <span class="lbl" data-i18n="total">Gesamtbetrag:</span>
-        <span class="val" id="price">€ 1.249</span>
+        <span class="val" id="price">€</span>
       </div>
       <div class="ship" data-i18n="freeDelivery">Kostenlose Lieferung &amp; Montage</div>
       <button class="cta" id="cta">
@@ -470,7 +470,7 @@ const SET_ORDER = ['modern', 'angle', 'x', 'picknick'];
 const I18N = {
   de: {
     model: 'Modell', dimensions: 'Abmessung', base: 'Untergestell',
-    material: 'Material', materialValue: 'Douglas · Natur', components: 'Komponenten',
+    material: 'Material', materialValue: 'Douglasienholz', components: 'Komponenten',
     length: 'LÄNGE', table: 'Tisch', benches: 'Bänke', backrest: 'Rückenlehne',
     summary: 'ÜBERSICHT', total: 'Gesamtbetrag:',
     freeDelivery: 'Kostenlose Lieferung & Montage', addToCart: 'In den Warenkorb',
@@ -484,7 +484,7 @@ const I18N = {
   },
   nl: {
     model: 'Model', dimensions: 'Afmeting', base: 'Onderstel',
-    material: 'Materiaal', materialValue: 'Douglas · Natural', components: 'Componenten',
+    material: 'Materiaal', materialValue: 'Douglashout', components: 'Componenten',
     length: 'LENGTE', table: 'Tafel', benches: 'Banken', backrest: 'Rugleuning',
     summary: 'OVERZICHT', total: 'Totaalbedrag:',
     freeDelivery: 'Gratis Levering & Montage', addToCart: 'Voeg toe aan winkelwagen',
@@ -498,7 +498,7 @@ const I18N = {
   },
   en: {
     model: 'Model', dimensions: 'Dimensions', base: 'Base',
-    material: 'Material', materialValue: 'Douglas · Natural', components: 'Components',
+    material: 'Material', materialValue: 'Douglas fir wood', components: 'Components',
     length: 'LENGTH', table: 'Table', benches: 'Benches', backrest: 'Backrest',
     summary: 'SUMMARY', total: 'Total:',
     freeDelivery: 'Free Delivery & Assembly', addToCart: 'Add to cart',
@@ -974,8 +974,8 @@ function updateUI() {
   document.getElementById('ov-l2').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm` +
     (cfg.legStyles ? `  ·  ${legLabel(state.leg)}` : '');
 
-  const price = Math.round(cfg.basePrice + (state.length - cfg.lengths[0]) * cfg.pricePerCm);
-  document.getElementById('price').textContent = '€ ' + price.toLocaleString('nl-NL');
+  // Price hidden for now — show only the currency symbol
+  document.getElementById('price').textContent = '€';
 
   // URL state
   const params = new URLSearchParams({
