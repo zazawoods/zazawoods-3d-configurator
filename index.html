@@ -34,6 +34,17 @@
     overflow: hidden;
   }
   #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .watermark {
+    position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+    pointer-events: none; z-index: 4;
+  }
+  .watermark .mono {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: Georgia, serif; font-size: 15px; letter-spacing: -1px;
+    color: var(--text-muted);
+  }
   .dim-pill {
     position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
     background: #fff; border: 1px solid var(--border);
@@ -255,15 +266,13 @@
   <div class="viewer">
     <canvas id="canvas"></canvas>
 
+    <div class="watermark"><div class="mono">Z<span style="opacity:.5">/</span>W</div></div>
+
     <div class="viewer-actions-bl">
-      <div class="icon-round" id="btn-save" data-i18n-title="btnSave" title="Speichern">
-        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
-      </div>
       <div class="icon-round" id="btn-share" data-i18n-title="btnShare" title="Link teilen">
         <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
       </div>
     </div>
-    <div class="dim-pill" id="dim-pill">200 × 90 × 76 cm</div>
     <div class="viewer-actions-br">
       <div class="icon-round" id="btn-screenshot" data-i18n-title="btnScreenshot" title="Screenshot">
         <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
@@ -823,10 +832,6 @@ document.getElementById('btn-screenshot').addEventListener('click', () => {
   link.click();
   showToast(t('toastScreenshot'));
 });
-document.getElementById('btn-save').addEventListener('click', () => {
-  const summary = `${SETS[state.set].name} · ${state.length} cm`;
-  showToast(t('toastSaved') + summary);
-});
 document.getElementById('btn-share').addEventListener('click', () => {
   if (navigator.clipboard) navigator.clipboard.writeText(location.href);
   showToast(t('toastLink'));
@@ -856,7 +861,6 @@ function updateUI() {
   if (cfg.hasBackrest && state.components.backrest) comp.push(t('backrest'));
   document.getElementById('sub-comp').textContent = comp.join(' + ') || '—';
 
-  document.getElementById('dim-pill').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`;
   document.getElementById('ov-l1').textContent = `${cfg.name} · ${t('materialValue')}`;
   document.getElementById('ov-l2').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`;
 
