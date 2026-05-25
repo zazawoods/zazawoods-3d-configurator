@@ -329,19 +329,17 @@
         </div>
       </div>
 
-      <!-- Componenten -->
-      <div class="acc" data-acc="comp" id="acc-comp">
+      <!-- Sitzbank -->
+      <div class="acc" data-acc="bench" id="acc-bench">
         <div class="acc-head">
           <div class="acc-icon">
-            <svg viewBox="0 0 24 24"><path d="M3 7h18M3 12h18M3 17h18"/></svg>
+            <svg viewBox="0 0 24 24"><path d="M3 13h18M5 13v6M19 13v6M5 13l1-3h12l1 3"/></svg>
           </div>
-          <div class="acc-title"><b data-i18n="components">Komponenten</b><span id="sub-comp">Tisch + Bänke</span></div>
+          <div class="acc-title"><b>Sitzbank</b><span id="sub-bench">2 Sitzbänke</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="acc-body">
-          <div class="tog-row" id="row-table"><span class="tog-label" data-i18n="table">Tisch</span><div class="tog on" data-comp="table"></div></div>
-          <div class="tog-row" id="row-bench"><span class="tog-label" data-i18n="benches">Bänke</span><div class="tog on" data-comp="bench"></div></div>
-          <div class="tog-row" id="row-backrest"><span class="tog-label" data-i18n="backrest">Rückenlehne</span><div class="tog on" data-comp="backrest"></div></div>
+          <div class="chips" id="bench-chips"></div>
         </div>
       </div>
 
@@ -461,8 +459,15 @@ function t(k) { return T[k] != null ? T[k] : k; }
 const state = {
   set: 'angle',
   length: 200,
-  components: { table: true, bench: true, backrest: true }
+  benches: 2          // 0 / 1 / 2 — only used by the Picknick (U/X) models
 };
+
+// Sitzbank options (matches the Shopify "Anzahl der Bänke" option)
+const BENCH_OPTIONS = [
+  { v: 0, label: 'Keine Sitzbank' },
+  { v: 1, label: '1 Sitzbank' },
+  { v: 2, label: '2 Sitzbänke' }
+];
 
 // ============================ THREE.JS ============================
 const canvas = document.getElementById('canvas');
@@ -697,24 +702,18 @@ function applyState() {
     });
   }
 
-  // 3) Component toggles
-  const cTable = state.components.table;
-  const cBench = state.components.bench;
-  const cBack  = state.components.backrest;
-  currentRoot.traverse(o => {
-    if (!o.name) return;
-    const n = o.name.toLowerCase();
-    if (n.startsWith('backrest')) { if (!cBack) o.visible = false; }
-    if (n.startsWith('table_top') || n.startsWith('tabletop') || n.startsWith('taple_top') || n.startsWith('table_legs')) {
-      if (!cTable) o.visible = false;
-    }
-    if (n.includes('benchplanks') || n.includes('planks_bench') ||
-        n.includes('benchlegs') || n.includes('benchlgs') ||
-        n.startsWith('2plans_bench') || n.startsWith('3benchplanks') ||
-        n.startsWith('2benchplanks')) {
-      if (!cBench) o.visible = false;
-    }
-  });
+  // 3) Sitzbank count (Picknick U/X only) — hide bench 1 and/or bench 2
+  if (cfg.fixedLeg) {
+    const b = state.benches;
+    currentRoot.traverse(o => {
+      if (!o.name) return;
+      const n = o.name.toLowerCase();
+      const isBench1 = n === '3benchplanks_1' || n.startsWith('benchlegs1_3planks') || n.startsWith('benchlgs_3planks');
+      const isBench2 = n === '3benchplanks_2' || n.startsWith('benchlegs2_3planks');
+      if (isBench1 && b < 1) o.visible = false;
+      if (isBench2 && b < 2) o.visible = false;
+    });
+  }
 
   // (Wood finish is fixed to Natural — no per-material tint applied.)
 
@@ -760,12 +759,7 @@ function buildSetGrid() {
       if (!SETS[k].lengths.includes(state.length)) {
         state.length = SETS[k].lengths[Math.floor(SETS[k].lengths.length / 2)];
       }
-      // Force table & bench on for non-separable sets
-      if (!SETS[k].separable) {
-        state.components.table = true;
-        state.components.bench = true;
-      }
-      buildSetGrid(); buildLengthChips(); updateComponentRows();
+      buildSetGrid(); buildLengthChips(); buildBenchChips(); updateBenchSection();
       await setActiveSet(k);
     });
     grid.appendChild(card);
@@ -788,29 +782,26 @@ function buildLengthChips() {
   });
 }
 
-function updateComponentRows() {
-  const cfg = SETS[state.set];
-  // Table & bench toggles only for separable sets (Picknick)
-  document.getElementById('row-table').classList.toggle('hidden', !cfg.separable);
-  document.getElementById('row-bench').classList.toggle('hidden', !cfg.separable);
-  document.getElementById('row-backrest').classList.toggle('hidden', !cfg.hasBackrest);
-  // Hide the whole Componenten accordion if nothing inside it is visible
-  const anyVisible = cfg.separable || cfg.hasBackrest;
-  document.getElementById('acc-comp').classList.toggle('hidden', !anyVisible);
-  document.querySelectorAll('.tog').forEach(t => {
-    const comp = t.dataset.comp;
-    t.classList.toggle('on', !!state.components[comp]);
+function buildBenchChips() {
+  const c = document.getElementById('bench-chips');
+  c.innerHTML = '';
+  BENCH_OPTIONS.forEach(opt => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (opt.v === state.benches ? ' active' : '');
+    chip.textContent = opt.label;
+    chip.addEventListener('click', () => {
+      state.benches = opt.v;
+      buildBenchChips();
+      applyState();
+    });
+    c.appendChild(chip);
   });
 }
 
-document.querySelectorAll('.tog').forEach(t => {
-  t.addEventListener('click', () => {
-    const comp = t.dataset.comp;
-    state.components[comp] = !state.components[comp];
-    t.classList.toggle('on', state.components[comp]);
-    applyState();
-  });
-});
+// The Sitzbank section appears only for the Picknick models (U / X).
+function updateBenchSection() {
+  document.getElementById('acc-bench').classList.toggle('hidden', !SETS[state.set].fixedLeg);
+}
 
 // Accordion behaviour
 document.querySelectorAll('.acc-head').forEach(h => {
@@ -854,24 +845,20 @@ function updateUI() {
   document.getElementById('sub-set').textContent = cfg.name;
   document.getElementById('sub-length').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`;
 
-  const comp = [];
-  if (state.components.table) comp.push(t('table'));
-  if (state.components.bench) comp.push(t('benches'));
-  if (cfg.hasBackrest && state.components.backrest) comp.push(t('backrest'));
-  document.getElementById('sub-comp').textContent = comp.join(' + ') || '—';
+  // Sitzbank summary line (only relevant for Picknick U/X)
+  const benchOpt = BENCH_OPTIONS.find(o => o.v === state.benches) || BENCH_OPTIONS[2];
+  document.getElementById('sub-bench').textContent = benchOpt.label;
 
   document.getElementById('ov-l1').textContent = `${cfg.name} · ${t('materialValue')}`;
-  document.getElementById('ov-l2').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`;
+  document.getElementById('ov-l2').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`
+    + (cfg.fixedLeg ? `  ·  ${benchOpt.label}` : '');
 
   // Price hidden for now — show only the currency symbol
   document.getElementById('price').textContent = '€';
 
   // URL state
   const params = new URLSearchParams({
-    set: state.set, length: state.length,
-    table: state.components.table ? 1 : 0,
-    bench: state.components.bench ? 1 : 0,
-    backrest: state.components.backrest ? 1 : 0
+    set: state.set, length: state.length, benches: state.benches
   });
   history.replaceState(null, '', '?' + params.toString());
 }
@@ -887,18 +874,17 @@ function updateUI() {
   } else {
     state.length = cfg.lengths[Math.floor(cfg.lengths.length / 2)];
   }
-  ['table', 'bench', 'backrest'].forEach(c => { if (qp.has(c)) state.components[c] = qp.get(c) === '1'; });
-  // For non-separable sets, table & bench are always on regardless of URL params
-  if (!cfg.separable) {
-    state.components.table = true;
-    state.components.bench = true;
+  if (qp.has('benches')) {
+    const b = parseInt(qp.get('benches'), 10);
+    if (b === 0 || b === 1 || b === 2) state.benches = b;
   }
 })();
 
 // ============================ Boot ============================
 buildSetGrid();
 buildLengthChips();
-updateComponentRows();
+buildBenchChips();
+updateBenchSection();
 updateUI();
 
 // On mobile the summary card scrolls with the content (not pinned);
