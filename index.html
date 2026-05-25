@@ -432,7 +432,7 @@ PICKNICK_LEGS.forEach(g => {
   };
 });
 
-const SET_ORDER = ['angle'].concat(PICKNICK_LEGS.map(g => 'picknick_' + g));
+const SET_ORDER = ['angle', 'picknick_Ushape', 'picknick_Xshape'];
 
 // ============================ TEXT (German) ============================
 const T = {
@@ -873,7 +873,7 @@ function updateUI() {
 // Restore from URL
 (function restore() {
   const qp = new URLSearchParams(location.search);
-  if (qp.has('set') && SETS[qp.get('set')]) state.set = qp.get('set');
+  if (qp.has('set') && SET_ORDER.includes(qp.get('set'))) state.set = qp.get('set');
   const cfg = SETS[state.set];
   if (qp.has('length')) {
     const L = parseInt(qp.get('length'), 10);
