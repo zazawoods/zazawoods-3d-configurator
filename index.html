@@ -7,14 +7,14 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #F4F4F4;
+    --bg: #F4EFE5;
     --bg-card: #FFFFFF;
     --header: #111111;
     --text: #111111;
     --text-muted: #8A8A8A;
     --accent: #111111;
-    --accent-soft: #ECECEC;
-    --border: #E2E2E2;
+    --accent-soft: #EEE6D7;
+    --border: #E7DFCF;
     --shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
   html, body { height: 100%; }
@@ -31,8 +31,8 @@
   .viewer {
     flex: 1; position: relative;
     background:
-      radial-gradient(ellipse 34% 13% at 50% 66%, rgba(200,178,138,0.55) 0%, rgba(200,178,138,0) 72%),
-      radial-gradient(ellipse 110% 95% at 50% 36%, #F6F1E7 0%, #ECE4D2 100%);
+      radial-gradient(ellipse 32% 13% at 50% 67%, rgba(160,138,100,0.62) 0%, rgba(160,138,100,0) 70%),
+      radial-gradient(ellipse 130% 110% at 50% 32%, #FBF8F1 0%, #F1ECDE 100%);
     overflow: hidden;
   }
   #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -66,7 +66,7 @@
     cursor: pointer; box-shadow: var(--shadow);
     transition: background .15s;
   }
-  .icon-round:hover { background: #F0F0F0; }
+  .icon-round:hover { background: #EFE8D9; }
   .icon-round svg { width: 16px; height: 16px; stroke: var(--text); fill: none; stroke-width: 1.6; }
   .toast {
     position: absolute; top: 70px; left: 50%; transform: translate(-50%, -20px);
@@ -78,7 +78,7 @@
   /* Loader */
   .loader {
     position: absolute; inset: 0;
-    background: #F4EEE2;
+    background: #F8F4EB;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; z-index: 9; transition: opacity .3s;
   }
@@ -106,10 +106,10 @@
     display: flex; align-items: center; gap: 12px;
     padding: 12px 14px; cursor: pointer;
   }
-  .acc-head:hover { background: #F7F7F7; }
+  .acc-head:hover { background: #EFE9DB; }
   .acc-icon {
     width: 40px; height: 40px; border-radius: 50%;
-    background: #EFEFEF; display:flex; align-items:center; justify-content:center; flex: none;
+    background: #EFE8DA; display:flex; align-items:center; justify-content:center; flex: none;
   }
   .acc-icon svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 1.5; }
   .acc-icon.wood { background: linear-gradient(135deg, #D8A06A, #9C6A3C); }
@@ -499,7 +499,7 @@ scene.add(fill);
 scene.add(new THREE.AmbientLight(0xffffff, 0.2));
 
 // Soft ground (receives shadows)
-const groundMat = new THREE.ShadowMaterial({ opacity: 0.18 });
+const groundMat = new THREE.ShadowMaterial({ opacity: 0.09 });
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), groundMat);
 ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
