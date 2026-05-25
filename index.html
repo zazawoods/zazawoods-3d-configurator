@@ -868,8 +868,9 @@ document.getElementById('btn-share').addEventListener('click', () => {
 document.getElementById('cta').addEventListener('click', () => {
   const v = getVariant();
   if (!v) { showToast(t('loadError')); return; }
-  // Shopify cart permalink — adds the chosen variant straight to the shop cart.
-  const cartUrl = SHOP_DOMAIN + '/cart/' + v[0] + ':1';
+  // Shopify cart permalink — adds the variant and lands on the shop cart page
+  // (?storefront=true keeps the user on the cart instead of jumping to checkout).
+  const cartUrl = SHOP_DOMAIN + '/cart/' + v[0] + ':1?storefront=true';
   try {
     // Configurator runs inside an iframe on zazawoods.de — break out to the top window.
     window.top.location.href = cartUrl;
