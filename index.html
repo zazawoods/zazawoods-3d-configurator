@@ -30,7 +30,9 @@
   /* Viewer */
   .viewer {
     flex: 1; position: relative;
-    background: #FFFFFF;
+    background:
+      radial-gradient(ellipse 34% 13% at 50% 66%, rgba(200,178,138,0.55) 0%, rgba(200,178,138,0) 72%),
+      radial-gradient(ellipse 110% 95% at 50% 36%, #F6F1E7 0%, #ECE4D2 100%);
     overflow: hidden;
   }
   #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -76,7 +78,7 @@
   /* Loader */
   .loader {
     position: absolute; inset: 0;
-    background: #FFFFFF;
+    background: #F4EEE2;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; z-index: 9; transition: opacity .3s;
   }
@@ -465,7 +467,7 @@ const state = {
 
 // ============================ THREE.JS ============================
 const canvas = document.getElementById('canvas');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -474,7 +476,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xFFFFFF);
+scene.background = null;  // transparent canvas — the beige CSS background shows through
 
 const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
