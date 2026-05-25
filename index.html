@@ -902,6 +902,22 @@ buildLengthChips();
 updateComponentRows();
 updateUI();
 
+// On mobile the summary card scrolls with the content (not pinned);
+// on desktop it stays in the pinned footer above the price + CTA.
+(function setupOverzichtPlacement() {
+  const ov = document.querySelector('.overzicht');
+  const scroll = document.querySelector('.panel-scroll');
+  const foot = document.querySelector('.panel-foot');
+  if (!ov || !scroll || !foot) return;
+  const mq = window.matchMedia('(max-width: 860px)');
+  function place() {
+    if (mq.matches) scroll.appendChild(ov);
+    else foot.insertBefore(ov, foot.firstChild);
+  }
+  place();
+  mq.addEventListener('change', place);
+})();
+
 // Wait for the embedded wood fallback texture to be ready before loading any
 // model, so material repair has something to substitute in.
 loadFallbackWood().then(() => setActiveSet(state.set));
