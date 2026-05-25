@@ -385,7 +385,7 @@ const SETS = {
     name: 'W',
     sub: 'Met rugleuning',
     file: 'angle.glb',
-    lengths: [160, 200, 250, 300, 350, 400],
+    lengths: [160, 200, 300, 350, 400],
     width: 90,
     height: 76,
     basePrice: 1149,
@@ -453,6 +453,45 @@ const T = {
   toastLink: 'Link kopiert', toastAdded: 'Hinzugefügt: '
 };
 function t(k) { return T[k] != null ? T[k] : k; }
+
+// ============================ SHOPIFY VARIANTS ============================
+// Real product variants on zazawoods.de. Each entry = [variantId, priceEUR].
+const SHOP_DOMAIN = 'https://zazawoods.de';
+
+// W → "Picknicktisch" (product 8230448038154): keyed by length
+const PICKNICKTISCH = {
+  160: [44527816868106, 975],
+  200: [44527816933642, 1140],
+  300: [44527817097482, 1440],
+  350: [44527817130250, 1799],
+  400: [44527817163018, 1885]
+};
+
+// U / X → "Gartentisch" (product 8231321338122): length → { X|U: [Keine, 1 Bank, 2 Bänke] }
+const GARTENTISCH = {
+  160: { X: [[44530780406026,775],[44530878218506,925],[44530878251274,1075]], U: [[44530878284042,775],[44530878316810,925],[44530878349578,1075]] },
+  180: { X: [[44530780438794,850],[44530878382346,999],[44530878415114,1140]], U: [[44530878447882,850],[44530878480650,999],[44530878513418,1140]] },
+  200: { X: [[44530780471562,899],[44530878546186,1050],[44530878578954,1199]], U: [[44530878611722,899],[44530878644490,1050],[44530878677258,1199]] },
+  220: { X: [[44530780504330,950],[44530878710026,1099],[44530878742794,1240]], U: [[44530878775562,950],[44530878808330,1099],[44530878841098,1240]] },
+  240: { X: [[44530780537098,999],[44530878873866,1150],[44530878906634,1299]], U: [[44530878939402,999],[44530878972170,1150],[44530879004938,1299]] },
+  260: { X: [[44530780569866,1050],[44530879037706,1199],[44530879070474,1340]], U: [[44530879103242,1050],[44530879136010,1199],[44530879168778,1340]] },
+  280: { X: [[44530780602634,1060],[44530879201546,1240],[44530879234314,1399]], U: [[44530879267082,1099],[44530879299850,1240],[44530879332618,1399]] },
+  300: { X: [[44530780635402,1150],[44530879365386,1299],[44530879398154,1440]], U: [[44530879430922,1150],[44530879463690,1299],[44530879496458,1440]] },
+  350: { X: [[44530780668170,1450],[44530879529226,1599],[44530879561994,1750]], U: [[44530879594762,1450],[44530879627530,1599],[44530879660298,1750]] },
+  400: { X: [[44530780700938,1699],[44530879693066,1750],[44530879725834,1899]], U: [[44530879758602,1599],[44530879791370,1750],[44530879824138,1899]] }
+};
+
+// Resolve the current configuration to a Shopify variant → [variantId, priceEUR] | null
+function getVariant() {
+  const cfg = SETS[state.set];
+  if (!cfg.fixedLeg) {
+    return PICKNICKTISCH[state.length] || null;           // W → Picknicktisch
+  }
+  const legCode = (cfg.fixedLeg === 'Ushape') ? 'U' : 'X'; // U / X → Gartentisch
+  const byLen = GARTENTISCH[state.length];
+  if (!byLen || !byLen[legCode]) return null;
+  return byLen[legCode][state.benches] || null;
+}
 
 
 // ============================ STATE ============================
@@ -827,7 +866,17 @@ document.getElementById('btn-share').addEventListener('click', () => {
   showToast(t('toastLink'));
 });
 document.getElementById('cta').addEventListener('click', () => {
-  showToast(`${t('toastAdded')}${SETS[state.set].name} ${state.length} cm`);
+  const v = getVariant();
+  if (!v) { showToast(t('loadError')); return; }
+  // Shopify cart permalink — adds the chosen variant straight to the shop cart.
+  const cartUrl = SHOP_DOMAIN + '/cart/' + v[0] + ':1';
+  try {
+    // Configurator runs inside an iframe on zazawoods.de — break out to the top window.
+    window.top.location.href = cartUrl;
+  } catch (e) {
+    // Fallback when not embedded (opened standalone).
+    window.location.href = cartUrl;
+  }
 });
 
 function showToast(msg) {
@@ -853,8 +902,10 @@ function updateUI() {
   document.getElementById('ov-l2').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`
     + (cfg.fixedLeg ? `  ·  ${benchOpt.label}` : '');
 
-  // Price hidden for now — show only the currency symbol
-  document.getElementById('price').textContent = '€';
+  // Real Shopify price for the current configuration
+  const v = getVariant();
+  document.getElementById('price').textContent =
+    v ? '€ ' + v[1].toLocaleString('de-DE') : '€ —';
 
   // URL state
   const params = new URLSearchParams({
