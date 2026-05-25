@@ -376,7 +376,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 // ============================ CATALOG ============================
 const SETS = {
   angle: {
-    name: 'Angle Set',
+    name: 'W',
     sub: 'Met rugleuning',
     file: 'angle.glb',
     lengths: [160, 200, 250, 300, 350, 400],
@@ -431,6 +431,9 @@ PICKNICK_LEGS.forEach(g => {
     icon: LEG_ICONS[g]
   };
 });
+// Short display names for the models that are shown
+SETS.picknick_Ushape.name = 'U';
+SETS.picknick_Xshape.name = 'X';
 
 const SET_ORDER = ['angle', 'picknick_Ushape', 'picknick_Xshape'];
 
