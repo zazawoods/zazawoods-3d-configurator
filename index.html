@@ -7,7 +7,7 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #F4EFE5;
+    --bg: #F2ECDE;
     --bg-card: #FFFFFF;
     --header: #111111;
     --text: #111111;
@@ -30,9 +30,11 @@
   /* Viewer */
   .viewer {
     flex: 1; position: relative;
+    /* Same flat tone as the control panel — seamless across the whole app.
+       The soft radial is just the table's contact shadow on the floor. */
     background:
-      radial-gradient(ellipse 32% 13% at 50% 67%, rgba(160,138,100,0.62) 0%, rgba(160,138,100,0) 70%),
-      radial-gradient(ellipse 130% 110% at 50% 32%, #FBF8F1 0%, #F1ECDE 100%);
+      radial-gradient(ellipse 32% 13% at 50% 67%, rgba(160,138,100,0.42) 0%, rgba(160,138,100,0) 70%),
+      #F2ECDE;
     overflow: hidden;
   }
   #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -78,7 +80,7 @@
   /* Loader */
   .loader {
     position: absolute; inset: 0;
-    background: #F8F4EB;
+    background: #F2ECDE;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; z-index: 9; transition: opacity .3s;
   }
@@ -751,6 +753,13 @@ function applyState() {
       const isBench2 = n === '3benchplanks_2' || n.startsWith('benchlegs2_3planks');
       if (isBench1 && b < 1) o.visible = false;
       if (isBench2 && b < 2) o.visible = false;
+    });
+  }
+
+  // 4) W (angle) is sold without backrests — always hide that geometry
+  if (!cfg.fixedLeg) {
+    currentRoot.traverse(o => {
+      if (o.name && /backrest/i.test(o.name)) o.visible = false;
     });
   }
 
