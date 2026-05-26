@@ -734,6 +734,8 @@ async function setActiveSet(setKey) {
   document.getElementById('loader').classList.add('hidden');
   applyState();
   recenter();
+  // Debug inspection hook (temporary)
+  window.__cr = root;
 }
 
 // Reset all object visibility (re-show everything inside the current root)
