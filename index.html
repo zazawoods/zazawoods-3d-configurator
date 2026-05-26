@@ -7,14 +7,15 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #F2ECDE;
+    --bg: #F4F0E6;          /* cream like bogade — slightly cooler than before */
     --bg-card: #FFFFFF;
     --header: #111111;
-    --text: #111111;
+    --text: #1A1A1A;
     --text-muted: #8A8A8A;
-    --accent: #111111;
-    --accent-soft: #EEE6D7;
-    --border: #E7DFCF;
+    --accent: #D88550;       /* warm rust/ochre accent (bogade-style) */
+    --accent-strong: #B26840;
+    --accent-soft: #FBEEDB;
+    --border: #E5DDC9;
     --shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
   html, body { height: 100%; }
@@ -34,7 +35,7 @@
        The soft radial is just the table's contact shadow on the floor. */
     background:
       radial-gradient(ellipse 32% 13% at 50% 67%, rgba(160,138,100,0.42) 0%, rgba(160,138,100,0) 70%),
-      #F2ECDE;
+      #F4F0E6;
     overflow: hidden;
   }
   #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -68,7 +69,7 @@
     cursor: pointer; box-shadow: var(--shadow);
     transition: background .15s;
   }
-  .icon-round:hover { background: #EFE8D9; }
+  .icon-round:hover { background: #ECE5D2; }
   .icon-round svg { width: 16px; height: 16px; stroke: var(--text); fill: none; stroke-width: 1.6; }
   .toast {
     position: absolute; top: 70px; left: 50%; transform: translate(-50%, -20px);
@@ -80,7 +81,7 @@
   /* Loader */
   .loader {
     position: absolute; inset: 0;
-    background: #F2ECDE;
+    background: #F4F0E6;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; z-index: 9; transition: opacity .3s;
   }
@@ -92,7 +93,7 @@
   /* Panel */
   .panel {
     width: 380px;
-    background: #F2ECDE;
+    background: #F4F0E6;
     display: flex; flex-direction: column;
     overflow: hidden;
   }
@@ -107,10 +108,10 @@
     display: flex; align-items: center; gap: 12px;
     padding: 12px 14px; cursor: pointer;
   }
-  .acc-head:hover { background: #EFE9DB; }
+  .acc-head:hover { background: #EDE7D6; }
   .acc-icon {
     width: 40px; height: 40px; border-radius: 50%;
-    background: #EFE8DA; display:flex; align-items:center; justify-content:center; flex: none;
+    background: #ECE5D2; display:flex; align-items:center; justify-content:center; flex: none;
   }
   .acc-icon svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 1.5; }
   .acc-icon.wood { background: linear-gradient(135deg, #D8A06A, #9C6A3C); }
@@ -209,7 +210,7 @@
     display: flex; align-items: center; justify-content: center; gap: 8px;
     transition: background .15s, transform .08s;
   }
-  .cta:hover { background: #000000; }
+  .cta:hover { background: var(--accent-strong); }
   .cta:active { transform: scale(.99); }
   .cta svg { width: 17px; height: 17px; stroke: #fff; fill: none; stroke-width: 1.8; }
 
