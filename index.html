@@ -546,6 +546,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;  // used to show "1 Rückenlehne" by clipping the mesh in half
 
 const scene = new THREE.Scene();
 scene.background = null;  // transparent canvas — the beige CSS background shows through
@@ -731,11 +732,55 @@ async function setActiveSet(setKey) {
   scene.add(root);
   // First-time normalisation so model sits on ground at the origin
   root.position.set(0, 0, 0);
+  prepareBackrestClipping();
   document.getElementById('loader').classList.add('hidden');
   applyState();
   recenter();
-  // Debug inspection hook (temporary)
-  window.__cr = root;
+  applyBackrestClip();
+}
+
+// On the W model the GLB bakes BOTH backrests into a single mesh per length,
+// so we clone the materials (per backrest group) and use clipping planes
+// to optionally hide one half when "1 Rückenlehne" is selected.
+function prepareBackrestClipping() {
+  if (!currentRoot) return;
+  currentRoot.traverse(o => {
+    if (!o.name) return;
+    if (!/^Backrest_W_\d+$/i.test(o.name)) return;
+    o.traverse(child => {
+      if (child.isMesh && child.material && !child.userData.bckClone) {
+        child.material = child.material.clone();
+        child.userData.bckClone = true;
+      }
+    });
+  });
+}
+
+// Apply / clear the clipping plane on the currently-visible W backrest group
+// based on state.backrests (0 → already hidden; 1 → clip half; 2 → no clip).
+function applyBackrestClip() {
+  if (!currentRoot) return;
+  const cfg = SETS[state.set];
+  if (cfg.fixedLeg) return;  // only W (Picknicktisch) has backrests
+  currentRoot.updateMatrixWorld(true);
+  currentRoot.traverse(o => {
+    if (!o.name) return;
+    if (!/^Backrest_W_\d+$/i.test(o.name)) return;
+    o.traverse(child => {
+      if (!child.isMesh || !child.material || !child.userData.bckClone) return;
+      if (state.backrests === 1 && o.visible) {
+        // Compute the per-group world-X midline so we clip exactly between the two backrests.
+        const box = new THREE.Box3().setFromObject(o);
+        const midX = box.isEmpty() ? 0 : (box.min.x + box.max.x) / 2;
+        // Plane equation: x - midX = 0 → keep the half where x > midX (one backrest only).
+        child.material.clippingPlanes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), -midX)];
+        child.material.clipShadows = false;
+      } else {
+        child.material.clippingPlanes = [];
+      }
+      child.material.needsUpdate = true;
+    });
+  });
 }
 
 // Reset all object visibility (re-show everything inside the current root)
@@ -785,9 +830,10 @@ function applyState() {
     });
   }
 
-  // 4) W (angle) Rückenlehne — hide all backrests when count is 0.
-  // (The GLB only contains a single backrest geometry per length, so 1 and 2
-  //  share the same visual; the Shopify variant still differs by count.)
+  // 4) W (angle) Rückenlehne count:
+  //    0 → hide the backrest group entirely
+  //    1 → keep visible; applyBackrestClip() below halves it via a clipping plane
+  //    2 → keep visible, no clipping (both backrests show)
   if (!cfg.fixedLeg && state.backrests === 0) {
     currentRoot.traverse(o => {
       if (o.name && /backrest/i.test(o.name)) o.visible = false;
@@ -798,6 +844,7 @@ function applyState() {
 
   updateUI();
   recenter();
+  applyBackrestClip();
 }
 
 // Re-centre model: shift X/Z so visible bbox center is at origin, Y so it sits on ground
