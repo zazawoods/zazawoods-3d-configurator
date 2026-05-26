@@ -401,7 +401,10 @@ const SETS = {
     name: 'W',
     sub: 'Met rugleuning',
     file: 'angle.glb',
-    lengths: [160, 200, 300, 350, 400],
+    // All Picknicktisch lengths on zazawoods.de. The GLB only ships geometry for
+    // a subset (see W_GLB_LENGTHS) — the rest are rendered by Z-scaling the
+    // closest available length. Cart variant / price always uses state.length.
+    lengths: [160, 180, 200, 220, 240, 260, 280, 300, 350, 400],
     width: 90,
     height: 76,
     basePrice: 1149,
@@ -422,6 +425,19 @@ const LEG_ICONS = {
   Ushape:       '<svg viewBox="0 0 30 30"><path d="M6 6v18h18V6"/></svg>',
   Xshape:       '<svg viewBox="0 0 30 30"><path d="M7 7 23 23 M23 7 7 23"/></svg>'
 };
+
+// Lengths actually present in angle.glb (in cm). User-selected lengths not in
+// this list fall back to the closest available length and the model is
+// Z-scaled to match the requested length.
+const W_GLB_LENGTHS = [160, 200, 250, 300, 350, 400];
+function renderLengthForW(L) {
+  let best = W_GLB_LENGTHS[0], bestD = Math.abs(L - best);
+  for (const g of W_GLB_LENGTHS) {
+    const d = Math.abs(L - g);
+    if (d < bestD) { best = g; bestD = d; }
+  }
+  return best;
+}
 
 // Picknick — each Untergestell is its own model.
 const PICKNICK_LEGS = ['Xmodern', 'Aframe', 'butterfly', 'diagonalpole', 'Ushape', 'Xshape'];
@@ -794,12 +810,16 @@ function applyState() {
   resetVisibility();
   const cfg = SETS[state.set];
 
-  // 1) Length filter (any node ending with _NNN or _NNNN)
+  // 1) Length filter — for W, fall back to the closest GLB length and Z-scale
+  //    the model so the visible table matches state.length exactly.
+  const renderL = cfg.fixedLeg ? state.length : renderLengthForW(state.length);
   currentRoot.traverse(o => {
     if (!o.name) return;
     const m = o.name.match(/_(\d{3,4})$/);
-    if (m) o.visible = parseInt(m[1], 10) === state.length;
+    if (m) o.visible = parseInt(m[1], 10) === renderL;
   });
+  // Stretch along the table's length axis (Z) when state.length differs from the GLB length.
+  currentRoot.scale.set(1, 1, state.length / renderL);
 
   // 2) Untergestell filter — each Picknick model shows only its own legs
   if (cfg.fixedLeg) {
