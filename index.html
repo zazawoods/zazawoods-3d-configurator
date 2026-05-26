@@ -331,7 +331,7 @@
         </div>
       </div>
 
-      <!-- Sitzbank -->
+      <!-- Sitzbank (only for U / X) -->
       <div class="acc" data-acc="bench" id="acc-bench">
         <div class="acc-head">
           <div class="acc-icon">
@@ -342,6 +342,20 @@
         </div>
         <div class="acc-body">
           <div class="chips" id="bench-chips"></div>
+        </div>
+      </div>
+
+      <!-- Rückenlehne (only for W) -->
+      <div class="acc" data-acc="backrest" id="acc-backrest">
+        <div class="acc-head">
+          <div class="acc-icon">
+            <svg viewBox="0 0 24 24"><path d="M5 21V9M19 21V9M5 9h14M7 9V5h10v4"/></svg>
+          </div>
+          <div class="acc-title"><b>Rückenlehne</b><span id="sub-backrest">Keine Rückenlehne</span></div>
+          <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="acc-body">
+          <div class="chips" id="backrest-chips"></div>
         </div>
       </div>
 
@@ -460,13 +474,15 @@ function t(k) { return T[k] != null ? T[k] : k; }
 // Real product variants on zazawoods.de. Each entry = [variantId, priceEUR].
 const SHOP_DOMAIN = 'https://zazawoods.de';
 
-// W → "Picknicktisch" (product 8230448038154): keyed by length
+// W → "Picknicktisch": length → [Keine Rückenlehne, 1 Rückenlehne, 2 Rückenlehnen]
+// Each entry = [variantId, priceEUR]. (Only the lengths the GLB supports are listed —
+// the shop also has 180/220/240/260/280, but the 3D model has no geometry for them yet.)
 const PICKNICKTISCH = {
-  160: [44527816868106, 975],
-  200: [44527816933642, 1140],
-  300: [44527817097482, 1440],
-  350: [44527817130250, 1799],
-  400: [44527817163018, 1885]
+  160: [[44527816868106, 975], [53105591025930, 1215], [53105591058698, 1455]],
+  200: [[44527816933642, 1140], [53105591157002, 1380], [53105591189770, 1620]],
+  300: [[44527817097482, 1440], [53105591484682, 1680], [53105591517450, 1920]],
+  350: [[44527817130250, 1799], [53105591550218, 2039], [53105591582986, 2279]],
+  400: [[44527817163018, 1885], [53105591615754, 2125], [53105591648522, 2365]]
 };
 
 // U / X → "Gartentisch" (product 8231321338122): length → { X|U: [Keine, 1 Bank, 2 Bänke] }
@@ -487,7 +503,10 @@ const GARTENTISCH = {
 function getVariant() {
   const cfg = SETS[state.set];
   if (!cfg.fixedLeg) {
-    return PICKNICKTISCH[state.length] || null;           // W → Picknicktisch
+    // W → Picknicktisch: pick variant by length × backrest count
+    const byLen = PICKNICKTISCH[state.length];
+    if (!byLen) return null;
+    return byLen[state.backrests] || byLen[0] || null;
   }
   const legCode = (cfg.fixedLeg === 'Ushape') ? 'U' : 'X'; // U / X → Gartentisch
   const byLen = GARTENTISCH[state.length];
@@ -500,7 +519,8 @@ function getVariant() {
 const state = {
   set: 'angle',
   length: 200,
-  benches: 2          // 0 / 1 / 2 — only used by the Picknick (U/X) models
+  benches: 2,         // 0 / 1 / 2 — only used by the Picknick (U/X) models
+  backrests: 0        // 0 / 1 / 2 — only used by the W (Picknicktisch) model
 };
 
 // Sitzbank options (matches the Shopify "Anzahl der Bänke" option)
@@ -508,6 +528,13 @@ const BENCH_OPTIONS = [
   { v: 0, label: 'Keine Sitzbank' },
   { v: 1, label: '1 Sitzbank' },
   { v: 2, label: '2 Sitzbänke' }
+];
+
+// Rückenlehne options for W (matches the Shopify "Rückenlehne" option)
+const BACKREST_OPTIONS = [
+  { v: 0, label: 'Keine Rückenlehne' },
+  { v: 1, label: '1 Rückenlehne' },
+  { v: 2, label: '2 Rückenlehnen' }
 ];
 
 // ============================ THREE.JS ============================
@@ -756,8 +783,10 @@ function applyState() {
     });
   }
 
-  // 4) W (angle) is sold without backrests — always hide that geometry
-  if (!cfg.fixedLeg) {
+  // 4) W (angle) Rückenlehne — hide all backrests when count is 0.
+  // (The GLB only contains a single backrest geometry per length, so 1 and 2
+  //  share the same visual; the Shopify variant still differs by count.)
+  if (!cfg.fixedLeg && state.backrests === 0) {
     currentRoot.traverse(o => {
       if (o.name && /backrest/i.test(o.name)) o.visible = false;
     });
@@ -807,7 +836,7 @@ function buildSetGrid() {
       if (!SETS[k].lengths.includes(state.length)) {
         state.length = SETS[k].lengths[Math.floor(SETS[k].lengths.length / 2)];
       }
-      buildSetGrid(); buildLengthChips(); buildBenchChips(); updateBenchSection();
+      buildSetGrid(); buildLengthChips(); buildBenchChips(); buildBackrestChips(); updateBenchSection();
       await setActiveSet(k);
     });
     grid.appendChild(card);
@@ -846,9 +875,29 @@ function buildBenchChips() {
   });
 }
 
-// The Sitzbank section appears only for the Picknick models (U / X).
+function buildBackrestChips() {
+  const c = document.getElementById('backrest-chips');
+  if (!c) return;
+  c.innerHTML = '';
+  BACKREST_OPTIONS.forEach(opt => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (opt.v === state.backrests ? ' active' : '');
+    chip.textContent = opt.label;
+    chip.addEventListener('click', () => {
+      state.backrests = opt.v;
+      buildBackrestChips();
+      applyState();
+    });
+    c.appendChild(chip);
+  });
+}
+
+// Sitzbank appears only for U / X (fixedLeg models), Rückenlehne only for W.
 function updateBenchSection() {
-  document.getElementById('acc-bench').classList.toggle('hidden', !SETS[state.set].fixedLeg);
+  const isFixedLeg = !!SETS[state.set].fixedLeg;
+  document.getElementById('acc-bench').classList.toggle('hidden', !isFixedLeg);
+  const ab = document.getElementById('acc-backrest');
+  if (ab) ab.classList.toggle('hidden', isFixedLeg);
 }
 
 // Accordion behaviour
@@ -904,13 +953,18 @@ function updateUI() {
   document.getElementById('sub-set').textContent = cfg.name;
   document.getElementById('sub-length').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`;
 
-  // Sitzbank summary line (only relevant for Picknick U/X)
+  // Sitzbank summary (only relevant for Picknick U/X)
   const benchOpt = BENCH_OPTIONS.find(o => o.v === state.benches) || BENCH_OPTIONS[2];
   document.getElementById('sub-bench').textContent = benchOpt.label;
 
+  // Rückenlehne summary (only relevant for W)
+  const backOpt = BACKREST_OPTIONS.find(o => o.v === state.backrests) || BACKREST_OPTIONS[0];
+  const subBack = document.getElementById('sub-backrest');
+  if (subBack) subBack.textContent = backOpt.label;
+
   document.getElementById('ov-l1').textContent = `${cfg.name} · ${t('materialValue')}`;
   document.getElementById('ov-l2').textContent = `${state.length} × ${cfg.width} × ${cfg.height} cm`
-    + (cfg.fixedLeg ? `  ·  ${benchOpt.label}` : '');
+    + (cfg.fixedLeg ? `  ·  ${benchOpt.label}` : `  ·  ${backOpt.label}`);
 
   // Real Shopify price for the current configuration
   const v = getVariant();
@@ -919,7 +973,8 @@ function updateUI() {
 
   // URL state
   const params = new URLSearchParams({
-    set: state.set, length: state.length, benches: state.benches
+    set: state.set, length: state.length,
+    benches: state.benches, backrests: state.backrests
   });
   history.replaceState(null, '', '?' + params.toString());
 }
@@ -939,12 +994,17 @@ function updateUI() {
     const b = parseInt(qp.get('benches'), 10);
     if (b === 0 || b === 1 || b === 2) state.benches = b;
   }
+  if (qp.has('backrests')) {
+    const r = parseInt(qp.get('backrests'), 10);
+    if (r === 0 || r === 1 || r === 2) state.backrests = r;
+  }
 })();
 
 // ============================ Boot ============================
 buildSetGrid();
 buildLengthChips();
 buildBenchChips();
+buildBackrestChips();
 updateBenchSection();
 updateUI();
 
