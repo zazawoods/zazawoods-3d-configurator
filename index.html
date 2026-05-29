@@ -1101,8 +1101,11 @@ function makeThumb() {
   const tw = 120, th = 90;
   const tc = document.createElement('canvas');
   tc.width = tw; tc.height = th;
-  tc.getContext('2d').drawImage(canvas, 0, 0, tw, th);
-  return tc.toDataURL('image/jpeg', 0.6);
+  const ctx = tc.getContext('2d');
+  ctx.fillStyle = '#F7F6F3';
+  ctx.fillRect(0, 0, tw, th);
+  ctx.drawImage(canvas, 0, 0, tw, th);
+  return tc.toDataURL('image/jpeg', 0.7);
 }
 function renderSavedList() {
   const list = document.getElementById('saved-list');
