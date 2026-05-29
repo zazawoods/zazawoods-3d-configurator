@@ -828,9 +828,11 @@ function fixWoodUVs(root) {
       const nW = Lz ? nx : nz;            // normal component across width
       const nL = Lz ? nz : nx;            // normal component along length
       let u, v;
-      if (ny >= nx && ny >= nz) { u = W * WOOD_SW; v = L * WOOD_SL; }   // top / bottom
-      else if (nW >= nL)        { u = py * WOOD_SW; v = L * WOOD_SL; }  // long side edge
-      else                      { u = W * WOOD_SW; v = py * WOOD_SL; }  // short end
+      // Texture grain runs along U → map the length onto U so the grain runs
+      // lengthwise on the top and the long side edges.
+      if (ny >= nx && ny >= nz) { u = L * WOOD_SL; v = W * WOOD_SW; }   // top / bottom
+      else if (nW >= nL)        { u = L * WOOD_SL; v = py * WOOD_SW; }  // long side edge
+      else                      { u = py * WOOD_SL; v = W * WOOD_SW; }  // short end
       uv[i * 2] = u; uv[i * 2 + 1] = v;
     }
     g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
