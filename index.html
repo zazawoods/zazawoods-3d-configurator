@@ -100,15 +100,15 @@
   .ar-qr img, .ar-qr canvas { border-radius: 8px; display: block; }
   .ar-card small { font-size: 11.5px; color: var(--text-muted); line-height: 1.45; display: block; }
   /* Share modal buttons */
-  .share-row { display: flex; gap: 10px; justify-content: center; }
-  .share-btn {
+  .snd-row { display: flex; gap: 10px; justify-content: center; }
+  .snd-btn {
     flex: 1; padding: 12px 8px; border: 2px solid var(--border); background: #fff;
     border-radius: 10px; font-size: 13.5px; font-weight: 500; color: var(--text);
     cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
     transition: border-color .15s, background .15s;
   }
-  .share-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
-  .share-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .snd-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .snd-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; }
   /* Saved configurations list */
   .save-cta {
     width: 100%; padding: 12px; border: none; background: var(--accent); color: #fff;
@@ -335,7 +335,7 @@
       <div class="icon-round" id="btn-save" title="Konfiguration speichern">
         <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
       </div>
-      <div class="icon-round" id="btn-share" data-i18n-title="btnShare" title="Link teilen">
+      <div class="icon-round" id="btn-snd" data-i18n-title="btnShare" title="Link teilen">
         <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
       </div>
     </div>
@@ -468,15 +468,15 @@
 </div>
 
 <!-- Share: e-mail / copy link -->
-<div class="ar-modal" id="share-modal">
+<div class="ar-modal" id="snd-modal">
   <div class="ar-card" style="width:320px;">
-    <div class="ar-close" id="share-close" aria-label="Schließen">✕</div>
+    <div class="ar-close" id="snd-close" aria-label="Schließen">✕</div>
     <h3 style="margin-bottom:18px;">Konfiguration teilen</h3>
-    <div class="share-row">
-      <button class="share-btn" id="share-email">
+    <div class="snd-row">
+      <button class="snd-btn" id="snd-email">
         <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>E-Mail
       </button>
-      <button class="share-btn" id="share-copy">
+      <button class="snd-btn" id="snd-copy">
         <svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>Link kopieren
       </button>
     </div>
@@ -1158,21 +1158,21 @@ document.getElementById('save-close').addEventListener('click', () => saveModal.
 saveModal.addEventListener('click', e => { if (e.target === saveModal) saveModal.classList.remove('show'); });
 
 // ---- SHARE: e-mail / copy link, like bogade ----
-const shareModal = document.getElementById('share-modal');
-document.getElementById('btn-share').addEventListener('click', () => shareModal.classList.add('show'));
-document.getElementById('share-close').addEventListener('click', () => shareModal.classList.remove('show'));
-shareModal.addEventListener('click', e => { if (e.target === shareModal) shareModal.classList.remove('show'); });
-document.getElementById('share-copy').addEventListener('click', () => {
+const sndModal = document.getElementById('snd-modal');
+document.getElementById('btn-snd').addEventListener('click', () => sndModal.classList.add('show'));
+document.getElementById('snd-close').addEventListener('click', () => sndModal.classList.remove('show'));
+sndModal.addEventListener('click', e => { if (e.target === sndModal) sndModal.classList.remove('show'); });
+document.getElementById('snd-copy').addEventListener('click', () => {
   if (navigator.clipboard) navigator.clipboard.writeText(location.href);
   showToast(t('toastLink'));
-  shareModal.classList.remove('show');
+  sndModal.classList.remove('show');
 });
-document.getElementById('share-email').addEventListener('click', () => {
+document.getElementById('snd-email').addEventListener('click', () => {
   const cfg = SETS[state.set];
   const subject = encodeURIComponent(`Zaza Woods Konfiguration: ${cfg.name} ${state.length} cm`);
   const body = encodeURIComponent(`Schau dir meine Konfiguration an:\n${location.href}`);
   window.location.href = `mailto:?subject=${subject}&body=${body}`;
-  shareModal.classList.remove('show');
+  sndModal.classList.remove('show');
 });
 document.getElementById('btn-dims').addEventListener('click', () => {
   dimVisible = !dimVisible;
