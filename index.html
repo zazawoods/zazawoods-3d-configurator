@@ -59,19 +59,28 @@
     z-index: 4;
   }
   .viewer-actions-bl, .viewer-actions-br {
-    position: absolute; bottom: 16px; display: flex; gap: 8px; z-index: 4;
+    position: absolute; bottom: 16px; display: flex; gap: 10px; z-index: 4;
   }
   .viewer-actions-bl { left: 16px; }
   .viewer-actions-br { right: 16px; }
   .icon-round {
-    width: 36px; height: 36px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: 50%;
     background: #fff; border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
-    cursor: pointer; box-shadow: var(--shadow);
-    transition: background .15s;
+    cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: background .15s, color .15s, border-color .15s;
+    color: var(--text);
   }
-  .icon-round:hover { background: #ECE5D2; }
-  .icon-round svg { width: 16px; height: 16px; stroke: var(--text); fill: none; stroke-width: 1.6; }
+  .icon-round:hover { background: #F2EFE9; }
+  .icon-round.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .icon-round svg { width: 19px; height: 19px; stroke: currentColor; fill: none; stroke-width: 1.7; }
+  /* Dimension overlay labels (bogade style) */
+  .dim-label {
+    position: absolute; transform: translate(-50%, -50%);
+    font-size: 11px; font-weight: 700; color: #222; white-space: nowrap;
+    pointer-events: none; z-index: 5;
+    text-shadow: 0 0 3px #F7F6F3, 0 0 3px #F7F6F3, 0 0 6px #F7F6F3;
+  }
   .toast {
     position: absolute; top: 70px; left: 50%; transform: translate(-50%, -20px);
     background: #111111; color: #fff; padding: 8px 16px; border-radius: 20px;
@@ -274,13 +283,16 @@
     <canvas id="canvas"></canvas>
 
     <div class="viewer-actions-bl">
+      <div class="icon-round" id="btn-save" title="Konfiguration speichern">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+      </div>
       <div class="icon-round" id="btn-share" data-i18n-title="btnShare" title="Link teilen">
         <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
       </div>
     </div>
     <div class="viewer-actions-br">
-      <div class="icon-round" id="btn-screenshot" data-i18n-title="btnScreenshot" title="Screenshot">
-        <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <div class="icon-round" id="btn-dims" title="Abmessungen anzeigen">
+        <svg viewBox="0 0 24 24"><path d="M21 3H3v18"/><path d="M21 3v18"/><path d="M3 21h18"/><path d="M7 3v3M11 3v3M15 3v3M19 3v3"/><path d="M3 7h3M3 11h3M3 15h3M3 19h3"/></svg>
       </div>
       <div class="icon-round" id="btn-reset" data-i18n-title="btnReset" title="Ansicht zurücksetzen">
         <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
@@ -874,6 +886,7 @@ function applyState() {
   updateUI();
   recenter();
   applyBackrestClip();
+  if (dimVisible) buildDimensions();
 }
 
 // Re-centre model: shift X/Z so visible bbox center is at origin, Y so it sits on ground
@@ -989,10 +1002,10 @@ document.getElementById('btn-reset').addEventListener('click', () => {
   controls.target.set(0, 0.5, 0);
   controls.update();
 });
-document.getElementById('btn-screenshot').addEventListener('click', () => {
+document.getElementById('btn-save').addEventListener('click', () => {
   renderer.render(scene, camera);
   const link = document.createElement('a');
-  link.download = `${state.set}_${state.length}cm.png`;
+  link.download = `zazawoods_${SETS[state.set].name}_${state.length}cm.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
   showToast(t('toastScreenshot'));
@@ -1000,6 +1013,11 @@ document.getElementById('btn-screenshot').addEventListener('click', () => {
 document.getElementById('btn-share').addEventListener('click', () => {
   if (navigator.clipboard) navigator.clipboard.writeText(location.href);
   showToast(t('toastLink'));
+});
+document.getElementById('btn-dims').addEventListener('click', () => {
+  dimVisible = !dimVisible;
+  document.getElementById('btn-dims').classList.toggle('active', dimVisible);
+  if (dimVisible) buildDimensions(); else clearDimensions();
 });
 document.getElementById('cta').addEventListener('click', () => {
   const v = getVariant();
@@ -1106,9 +1124,97 @@ updateUI();
 // model, so material repair has something to substitute in.
 loadFallbackWood().then(() => setActiveSet(state.set));
 
+// ============================ DIMENSIONS OVERLAY ============================
+let dimVisible = false, dimGroup = null, dimLabels = [];
+
+function clearDimensions() {
+  if (dimGroup) {
+    scene.remove(dimGroup);
+    dimGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    dimGroup = null;
+  }
+  dimLabels.forEach(l => l.el.remove());
+  dimLabels = [];
+}
+
+// Build the small arrow-headed line segments for one dimension a→b.
+function dimSegments(a, b) {
+  const pts = [a.clone(), b.clone()];
+  const dir = new THREE.Vector3().subVectors(b, a).normalize();
+  const ref = Math.abs(dir.y) > 0.9 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+  const perp = new THREE.Vector3().crossVectors(dir, ref).normalize();
+  const h = Math.min(a.distanceTo(b) * 0.05 + 0.02, 0.13);
+  const aHead = dir.clone().multiplyScalar(h), p = perp.clone().multiplyScalar(h * 0.6);
+  pts.push(a.clone(), a.clone().add(aHead).add(p), a.clone(), a.clone().add(aHead).sub(p));
+  const bHead = dir.clone().multiplyScalar(-h);
+  pts.push(b.clone(), b.clone().add(bHead).add(p), b.clone(), b.clone().add(bHead).sub(p));
+  return pts;
+}
+
+function buildDimensions() {
+  clearDimensions();
+  if (!currentRoot) return;
+  currentRoot.updateMatrixWorld(true);
+  const box = new THREE.Box3();
+  currentRoot.traverse(o => {
+    if (!o.isMesh) return;
+    let p = o, ok = true;
+    while (p && p !== scene) { if (!p.visible) { ok = false; break; } p = p.parent; }
+    if (!ok) return;
+    const cb = new THREE.Box3().setFromObject(o);
+    if (!cb.isEmpty()) box.union(cb);
+  });
+  if (box.isEmpty()) return;
+  const mn = box.min, mx = box.max;
+  const sx = mx.x - mn.x, sz = mx.z - mn.z;
+  const cfg = SETS[state.set];
+  const pad = Math.max(sx, sz, mx.y - mn.y) * 0.10;
+  dimGroup = new THREE.Group();
+  const mat = new THREE.LineBasicMaterial({ color: 0x222222, depthTest: false, transparent: true });
+
+  function addDim(a, b, text) {
+    const geo = new THREE.BufferGeometry().setFromPoints(dimSegments(a, b));
+    const seg = new THREE.LineSegments(geo, mat);
+    seg.renderOrder = 999;
+    dimGroup.add(seg);
+    const el = document.createElement('div');
+    el.className = 'dim-label';
+    el.textContent = text;
+    document.querySelector('.viewer').appendChild(el);
+    dimLabels.push({ el, pos: a.clone().lerp(b, 0.5) });
+  }
+
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  if (sz >= sx) {                                   // length runs along Z
+    addDim(V(mx.x + pad, mn.y, mn.z), V(mx.x + pad, mn.y, mx.z), state.length + ' cm');
+    addDim(V(mn.x, mn.y, mn.z - pad), V(mx.x, mn.y, mn.z - pad), cfg.width + ' cm');
+    addDim(V(mx.x + pad, mn.y, mx.z), V(mx.x + pad, mx.y, mx.z), cfg.height + ' cm');
+  } else {                                          // length runs along X
+    addDim(V(mn.x, mn.y, mx.z + pad), V(mx.x, mn.y, mx.z + pad), state.length + ' cm');
+    addDim(V(mx.x + pad, mn.y, mn.z), V(mx.x + pad, mn.y, mx.z), cfg.width + ' cm');
+    addDim(V(mx.x + pad, mn.y, mx.z + pad), V(mx.x + pad, mx.y, mx.z + pad), cfg.height + ' cm');
+  }
+  scene.add(dimGroup);
+  updateDimLabels();
+}
+
+// Project each label's 3D anchor to screen space (called every frame).
+function updateDimLabels() {
+  if (!dimLabels.length) return;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  const v = new THREE.Vector3();
+  dimLabels.forEach(l => {
+    v.copy(l.pos).project(camera);
+    l.el.style.left = (v.x * 0.5 + 0.5) * w + 'px';
+    l.el.style.top = (-v.y * 0.5 + 0.5) * h + 'px';
+    l.el.style.display = (v.z > 1) ? 'none' : 'block';
+  });
+}
+
 function tick() {
   requestAnimationFrame(tick);
   controls.update();
+  if (dimVisible) updateDimLabels();
   renderer.render(scene, camera);
 }
 tick();
