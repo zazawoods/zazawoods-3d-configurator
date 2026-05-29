@@ -1231,20 +1231,36 @@ function buildExportScene() {
   return grp;
 }
 
-// Pre-build AR assets (GLB for Android, USDZ for iPhone) so AR can start in the tap gesture.
-let arReady = false, arPrep = null;
+// Upload a generated model to our server, get back a real https URL that
+// Scene Viewer / Quick Look can fetch (blob: URLs don't work for native AR).
+async function uploadModel(bytes, ext) {
+  const r = await fetch('/ar-upload/' + ext, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: bytes
+  });
+  if (!r.ok) throw new Error('upload failed');
+  const j = await r.json();
+  return location.origin + j.url;   // absolute URL for the AR app
+}
+
+// Pre-build + upload AR assets (GLB for Android, USDZ for iPhone) so AR can
+// start synchronously in the tap gesture, with real URLs ready.
+let arReady = false, arBusy = false;
 function prepareMobileAR() {
   if (!isMobileDevice || !currentRoot) return;
   clearTimeout(prepareMobileAR._t);
   prepareMobileAR._t = setTimeout(async () => {
+    if (arBusy) return;
+    arBusy = true; arReady = false;
     try {
       const grp = buildExportScene();
       const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
-      const glbUrl = URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' }));
+      const glbUrl = await uploadModel(glb, 'glb');
       let usdzUrl = '';
       try {
         const usdz = await new USDZExporter().parse(grp);
-        usdzUrl = URL.createObjectURL(new Blob([usdz], { type: 'model/vnd.usdz+zip' }));
+        usdzUrl = await uploadModel(usdz.buffer || usdz, 'usdz');
       } catch (e) {}
       await loadScriptOnce('__mvLoaded', { type: 'module',
         src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
@@ -1256,25 +1272,25 @@ function prepareMobileAR() {
         mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
         mv.setAttribute('ar-scale', 'fixed');
         mv.setAttribute('camera-controls', '');
-        mv.style.cssText = 'position:fixed;left:-9999px;width:300px;height:300px;';
+        mv.style.cssText = 'position:fixed;left:-9999px;width:320px;height:320px;';
         document.body.appendChild(mv);
       }
       mv.src = glbUrl;
       if (usdzUrl) mv.setAttribute('ios-src', usdzUrl);
       arReady = true;
     } catch (e) { arReady = false; }
-  }, 250);
+    arBusy = false;
+  }, 300);
 }
 if (isMobileDevice) prepareMobileAR();
 
 function launchMobileAR() {
   const mv = document.getElementById('mv-ar');
-  if (mv && (mv.canActivateAR || mv.src)) {
+  if (arReady && mv) {
     try { mv.activateAR(); return; } catch (e) {}
   }
-  // Not ready yet → prepare and ask the user to tap again
-  prepareMobileAR();
-  showToast('AR wird vorbereitet … bitte erneut tippen');
+  if (!arBusy) prepareMobileAR();
+  showToast('AR wird vorbereitet … bitte gleich erneut tippen');
 }
 
 document.getElementById('btn-ar').addEventListener('click', () => {

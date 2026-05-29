@@ -1,12 +1,12 @@
 {
   "name": "zazawoods-3d-configurator",
   "version": "1.0.0",
-  "description": "Zaza Woods 3D furniture configurator — self-contained static site",
+  "description": "Zaza Woods 3D furniture configurator",
   "private": true,
   "scripts": {
-    "start": "serve . -l ${PORT:-3000}"
+    "start": "node server.js"
   },
   "dependencies": {
-    "serve": "^14.2.4"
+    "express": "^4.19.2"
   }
 }
