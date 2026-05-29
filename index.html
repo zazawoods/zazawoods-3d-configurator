@@ -1184,10 +1184,12 @@ document.getElementById('btn-dims').addEventListener('click', () => {
   if (dimVisible) buildDimensions(); else clearDimensions();
 });
 
-// ---- AR: QR modal on desktop, native AR on mobile (like bogade) ----
+// ---- AR: scan QR (desktop) → auto-open; tap button (phone) → one-tap native AR ----
 const arModal = document.getElementById('ar-modal');
-const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
+const isAndroid = /Android/.test(navigator.userAgent);
+const isMobileDevice = isIOS || isAndroid;
 
 function loadScriptOnce(flag, attrs) {
   if (window[flag]) return Promise.resolve();
@@ -1198,20 +1200,6 @@ function loadScriptOnce(flag, attrs) {
     s.onerror = reject;
     document.head.appendChild(s);
   });
-}
-
-// QR code from jsdelivr (same CDN as three.js — not blocked by ad blockers)
-function showQrModal() {
-  arModal.classList.add('show');
-  const box = document.getElementById('ar-qr');
-  box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:30px 0;">…</div>';
-  loadScriptOnce('__qrLoaded', { src: 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js' })
-    .then(() => {
-      box.innerHTML = '';
-      new window.QRCode(box, { text: location.href, width: 196, height: 196,
-        colorDark: '#1A1A1A', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.M });
-    })
-    .catch(() => { box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);word-break:break-all;">' + location.href + '</div>'; });
 }
 
 // Flatten the currently-visible meshes (with baked world transforms) for export.
@@ -1230,69 +1218,93 @@ function buildExportScene() {
   return grp;
 }
 
-// Upload a generated model to our server, get back a real https URL that
-// Scene Viewer / Quick Look can fetch (blob: URLs don't work for native AR).
+// Upload a generated model; get back a real https URL the AR apps can fetch.
 async function uploadModel(bytes, ext) {
   const r = await fetch('/ar-upload/' + ext, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/octet-stream' },
-    body: bytes
+    method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: bytes
   });
   if (!r.ok) throw new Error('upload failed');
   const j = await r.json();
-  return location.origin + j.url;   // absolute URL for the AR app
+  return location.origin + j.url;
 }
 
-// Build + upload AR assets (GLB for Android, USDZ for iPhone) for the current
-// configuration, then point a <model-viewer> at the real URLs.
+// Cache uploaded model URLs per configuration so launching is instant.
 const arKey = () => `${state.set}_${state.length}_${state.benches}_${state.backrests}`;
-let arReadyKey = null, arBusy = false;
-async function prepareMobileAR() {
-  if (!isMobileDevice || !currentRoot || arBusy) return;
+const arCache = {};          // key -> { glb, usdz }
+let arBusyKey = null;
+
+async function prepareAR(both) {
+  if (!currentRoot) return null;
   const key = arKey();
-  arBusy = true;
+  const have = arCache[key];
+  const needGlb = both || isAndroid || !isMobileDevice;
+  const needUsdz = both || isIOS || !isMobileDevice;
+  if (have && (!needGlb || have.glb) && (!needUsdz || have.usdz)) return have;
+  if (arBusyKey === key) return have || null;
+  arBusyKey = key;
   try {
     const grp = buildExportScene();
-    const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
-    const glbUrl = await uploadModel(glb, 'glb');
-    let usdzUrl = '';
-    try {
-      const usdz = await new USDZExporter().parse(grp);
-      usdzUrl = await uploadModel(usdz.buffer || usdz, 'usdz');
-    } catch (e) {}
-    await loadScriptOnce('__mvLoaded', { type: 'module',
-      src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
-    let mv = document.getElementById('mv-ar');
-    if (!mv) {
-      mv = document.createElement('model-viewer');
-      mv.id = 'mv-ar';
-      mv.setAttribute('ar', '');
-      mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-      mv.setAttribute('ar-scale', 'fixed');
-      mv.setAttribute('camera-controls', '');
-      mv.style.cssText = 'position:fixed;left:-9999px;width:320px;height:320px;';
-      document.body.appendChild(mv);
+    const out = Object.assign({}, arCache[key]);
+    if (needGlb && !out.glb) {
+      const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
+      out.glb = await uploadModel(glb, 'glb');
     }
-    mv.src = glbUrl;
-    if (usdzUrl) mv.setAttribute('ios-src', usdzUrl); else mv.removeAttribute('ios-src');
-    arReadyKey = key;
-  } catch (e) { arReadyKey = null; }
-  arBusy = false;
+    if (needUsdz && !out.usdz) {
+      const usdz = await new USDZExporter().parse(grp);
+      out.usdz = await uploadModel(usdz.buffer || usdz, 'usdz');
+    }
+    arCache[key] = out;
+  } catch (e) { /* leave cache as-is */ }
+  arBusyKey = null;
+  return arCache[key] || null;
 }
 
-function launchMobileAR() {
-  const mv = document.getElementById('mv-ar');
-  if (mv && arReadyKey === arKey()) {
-    try { mv.activateAR(); return; } catch (e) {}
-  }
-  if (arBusy) { showToast('AR wird vorbereitet …'); return; }
-  showToast('AR wird vorbereitet … bitte gleich erneut tippen');
-  prepareMobileAR();
+function sceneViewerUrl(glbUrl) {
+  return 'intent://arvr.google.com/scene-viewer/1.0?file=' + encodeURIComponent(glbUrl)
+    + '&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url='
+    + encodeURIComponent(location.origin) + ';end;';
+}
+
+// Phone: one tap → native AR (no model-viewer, no second tap).
+async function launchMobileAR() {
+  let c = arCache[arKey()];
+  const ready = isIOS ? (c && c.usdz) : (c && c.glb);
+  if (!ready) { showToast('AR …'); c = await prepareAR(false); }
+  if (!c) { showToast('AR nicht verfügbar'); return; }
+  if (isIOS && c.usdz) location.href = c.usdz;             // → AR Quick Look
+  else if (c.glb) location.href = sceneViewerUrl(c.glb);   // → Scene Viewer
+}
+
+// Desktop: upload both formats, QR points at /ar.html which auto-opens AR on the phone.
+function showQrModal() {
+  arModal.classList.add('show');
+  const box = document.getElementById('ar-qr');
+  box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:34px 0;">QR wird erstellt …</div>';
+  (async () => {
+    const c = await prepareAR(true);
+    if (!c || !c.usdz || !c.glb) throw new Error('no models');
+    const arUrl = location.origin + '/ar.html?u=' + encodeURIComponent(c.usdz) + '&g=' + encodeURIComponent(c.glb);
+    await loadScriptOnce('__qrLoaded', { src: 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js' });
+    box.innerHTML = '';
+    new window.QRCode(box, { text: arUrl, width: 196, height: 196,
+      colorDark: '#1A1A1A', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.L });
+  })().catch(() => {
+    box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:20px 0;">QR konnte nicht erstellt werden.</div>';
+  });
 }
 
 document.getElementById('btn-ar').addEventListener('click', () => {
   if (isMobileDevice) launchMobileAR(); else showQrModal();
 });
+
+// On phones, pre-build the AR model ahead of time (on load + on config change)
+// so the AR button opens on the first tap.
+if (isMobileDevice) {
+  const schedulePrep = () => { clearTimeout(window.__arPrepT); window.__arPrepT = setTimeout(() => prepareAR(false), 500); };
+  const _origApplyState = applyState;
+  applyState = function () { _origApplyState.apply(this, arguments); schedulePrep(); };
+  schedulePrep();
+}
 document.getElementById('ar-close').addEventListener('click', () => arModal.classList.remove('show'));
 arModal.addEventListener('click', e => { if (e.target === arModal) arModal.classList.remove('show'); });
 document.getElementById('cta').addEventListener('click', () => {
