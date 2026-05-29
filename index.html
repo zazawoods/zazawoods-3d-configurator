@@ -976,7 +976,6 @@ function applyState() {
   recenter();
   applyBackrestClip();
   if (dimVisible) buildDimensions();
-  if (typeof prepareMobileAR === 'function') prepareMobileAR();
 }
 
 // Re-centre model: shift X/Z so visible bbox center is at origin, Y so it sits on ground
@@ -1244,53 +1243,51 @@ async function uploadModel(bytes, ext) {
   return location.origin + j.url;   // absolute URL for the AR app
 }
 
-// Pre-build + upload AR assets (GLB for Android, USDZ for iPhone) so AR can
-// start synchronously in the tap gesture, with real URLs ready.
-let arReady = false, arBusy = false;
-function prepareMobileAR() {
-  if (!isMobileDevice || !currentRoot) return;
-  clearTimeout(prepareMobileAR._t);
-  prepareMobileAR._t = setTimeout(async () => {
-    if (arBusy) return;
-    arBusy = true; arReady = false;
+// Build + upload AR assets (GLB for Android, USDZ for iPhone) for the current
+// configuration, then point a <model-viewer> at the real URLs.
+const arKey = () => `${state.set}_${state.length}_${state.benches}_${state.backrests}`;
+let arReadyKey = null, arBusy = false;
+async function prepareMobileAR() {
+  if (!isMobileDevice || !currentRoot || arBusy) return;
+  const key = arKey();
+  arBusy = true;
+  try {
+    const grp = buildExportScene();
+    const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
+    const glbUrl = await uploadModel(glb, 'glb');
+    let usdzUrl = '';
     try {
-      const grp = buildExportScene();
-      const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
-      const glbUrl = await uploadModel(glb, 'glb');
-      let usdzUrl = '';
-      try {
-        const usdz = await new USDZExporter().parse(grp);
-        usdzUrl = await uploadModel(usdz.buffer || usdz, 'usdz');
-      } catch (e) {}
-      await loadScriptOnce('__mvLoaded', { type: 'module',
-        src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
-      let mv = document.getElementById('mv-ar');
-      if (!mv) {
-        mv = document.createElement('model-viewer');
-        mv.id = 'mv-ar';
-        mv.setAttribute('ar', '');
-        mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-        mv.setAttribute('ar-scale', 'fixed');
-        mv.setAttribute('camera-controls', '');
-        mv.style.cssText = 'position:fixed;left:-9999px;width:320px;height:320px;';
-        document.body.appendChild(mv);
-      }
-      mv.src = glbUrl;
-      if (usdzUrl) mv.setAttribute('ios-src', usdzUrl);
-      arReady = true;
-    } catch (e) { arReady = false; }
-    arBusy = false;
-  }, 300);
+      const usdz = await new USDZExporter().parse(grp);
+      usdzUrl = await uploadModel(usdz.buffer || usdz, 'usdz');
+    } catch (e) {}
+    await loadScriptOnce('__mvLoaded', { type: 'module',
+      src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
+    let mv = document.getElementById('mv-ar');
+    if (!mv) {
+      mv = document.createElement('model-viewer');
+      mv.id = 'mv-ar';
+      mv.setAttribute('ar', '');
+      mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+      mv.setAttribute('ar-scale', 'fixed');
+      mv.setAttribute('camera-controls', '');
+      mv.style.cssText = 'position:fixed;left:-9999px;width:320px;height:320px;';
+      document.body.appendChild(mv);
+    }
+    mv.src = glbUrl;
+    if (usdzUrl) mv.setAttribute('ios-src', usdzUrl); else mv.removeAttribute('ios-src');
+    arReadyKey = key;
+  } catch (e) { arReadyKey = null; }
+  arBusy = false;
 }
-if (isMobileDevice) prepareMobileAR();
 
 function launchMobileAR() {
   const mv = document.getElementById('mv-ar');
-  if (arReady && mv) {
+  if (mv && arReadyKey === arKey()) {
     try { mv.activateAR(); return; } catch (e) {}
   }
-  if (!arBusy) prepareMobileAR();
+  if (arBusy) { showToast('AR wird vorbereitet …'); return; }
   showToast('AR wird vorbereitet … bitte gleich erneut tippen');
+  prepareMobileAR();
 }
 
 document.getElementById('btn-ar').addEventListener('click', () => {
