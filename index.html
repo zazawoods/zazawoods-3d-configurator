@@ -681,7 +681,10 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-camera.position.set(4.6, 2.8, 5.2);   // a bit closer by default
+// Default camera position — a touch closer than before, and a bit closer
+// still on narrow viewports (phones) where the 3D area is short.
+if (window.innerWidth < 860) camera.position.set(3.8, 2.3, 4.3);
+else                          camera.position.set(4.6, 2.8, 5.2);
 
 // Lights
 const key = new THREE.DirectionalLight(0xfff2dc, 1.7);
