@@ -5,22 +5,23 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zaza Woods – 3D Configurator</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #F4F0E6;          /* cream like bogade — slightly cooler than before */
+    --bg: #F7F6F3;            /* bogade body background (1:1) */
     --bg-card: #FFFFFF;
-    --header: #111111;
+    --header: #1A1A1A;
     --text: #1A1A1A;
-    --text-muted: #8A8A8A;
-    --accent: #D88550;       /* warm rust/ochre accent (bogade-style) */
-    --accent-strong: #B26840;
-    --accent-soft: #FBEEDB;
-    --border: #E5DDC9;
-    --shadow: 0 1px 2px rgba(0,0,0,0.05);
+    --text-muted: #6B6B6B;    /* bogade muted text */
+    --accent: #C8965A;        /* bogade ochre accent (rgb 200,150,90) */
+    --accent-strong: #B07F45; /* darker accent for hover */
+    --accent-soft: #FDF8F2;   /* bogade selected-card peach */
+    --border: #E8E6E1;        /* bogade borders & dividers */
+    --shadow: 0 1px 3px rgba(0,0,0,0.06);  /* bogade soft shadow for round controls */
   }
   html, body { height: 100%; }
   body {
-    font-family: -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Inter', -apple-system, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
     overflow: hidden;
@@ -35,7 +36,7 @@
        The soft radial is just the table's contact shadow on the floor. */
     background:
       radial-gradient(ellipse 32% 13% at 50% 67%, rgba(160,138,100,0.42) 0%, rgba(160,138,100,0) 70%),
-      #F4F0E6;
+      #F7F6F3;
     overflow: hidden;
   }
   #canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
@@ -81,7 +82,7 @@
   /* Loader */
   .loader {
     position: absolute; inset: 0;
-    background: #F4F0E6;
+    background: #F7F6F3;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 14px; z-index: 9; transition: opacity .3s;
   }
@@ -93,7 +94,7 @@
   /* Panel */
   .panel {
     width: 380px;
-    background: #F4F0E6;
+    background: #F7F6F3;
     display: flex; flex-direction: column;
     overflow: hidden;
   }
@@ -111,11 +112,11 @@
     padding: 16px 2px; cursor: pointer;
   }
   .acc-icon {
-    width: 44px; height: 44px; border-radius: 50%;
-    background: #fff; border: 1px solid var(--border);
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow);
     display:flex; align-items:center; justify-content:center; flex: none;
   }
-  .acc-icon svg { width: 23px; height: 23px; stroke: var(--text); fill: none; stroke-width: 1.4; }
+  .acc-icon svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 1.4; }
   .acc-icon.wood { background: linear-gradient(135deg, #D8A06A, #9C6A3C); border-color: transparent; }
   .acc-title { flex: 1; }
   .acc-title b { font-size: 14.5px; font-weight: 600; display: block; }
@@ -132,7 +133,7 @@
   .opt-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
   .opt-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
   .opt-card {
-    border: 1.5px solid var(--border); border-radius: 10px;
+    border: 2px solid var(--border); border-radius: 10px;
     padding: 13px 4px 10px; text-align: center; cursor: pointer;
     transition: border-color .15s, background .15s;
     background: #fff;
@@ -149,8 +150,8 @@
   /* Length chips */
   .chips { display: flex; flex-wrap: wrap; gap: 6px; }
   .chip {
-    padding: 7px 11px; border-radius: 6px;
-    border: 1.5px solid var(--border); background: #fff;
+    padding: 7px 11px; border-radius: 8px;
+    border: 2px solid var(--border); background: #fff;
     font-size: 12.5px; cursor: pointer;
     transition: all .15s;
     min-width: 56px; text-align: center;
@@ -194,7 +195,7 @@
     padding: 2px 2px 12px; background: transparent; border: none; box-shadow: none;
     margin-bottom: 4px;
   }
-  .overzicht-h { font-size: 10.5px; font-weight: 600; color: var(--text-muted); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .overzicht-h { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.9px; text-transform: uppercase; margin-bottom: 6px; }
   .overzicht-l1 { font-size: 14px; font-weight: 600; }
   .overzicht-l2 { font-size: 12.5px; color: var(--text-muted); margin-top: 2px; }
   .total-row {
@@ -207,7 +208,7 @@
   .cta {
     width: 100%; padding: 13px; border: none;
     background: var(--accent); color: #fff;
-    font-size: 14px; font-weight: 600; letter-spacing: .3px;
+    font-size: 15px; font-weight: 600; letter-spacing: .3px;
     border-radius: 10px; cursor: pointer;
     display: flex; align-items: center; justify-content: center; gap: 8px;
     transition: background .15s, transform .08s;
