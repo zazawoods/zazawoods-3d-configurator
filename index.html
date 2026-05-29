@@ -81,6 +81,24 @@
     pointer-events: none; z-index: 5;
     text-shadow: 0 0 3px #F7F6F3, 0 0 3px #F7F6F3, 0 0 6px #F7F6F3;
   }
+  /* AR QR modal (bogade style) */
+  .ar-modal {
+    position: fixed; inset: 0; background: rgba(20,18,14,0.38);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+  }
+  .ar-modal.show { display: flex; }
+  .ar-card {
+    background: #fff; border-radius: 16px; padding: 30px 30px 26px; position: relative;
+    width: 330px; max-width: 88vw; text-align: center; box-shadow: 0 12px 48px rgba(0,0,0,0.22);
+  }
+  .ar-close { position: absolute; top: 14px; right: 17px; cursor: pointer; color: var(--text-muted); font-size: 15px; line-height: 1; }
+  .ar-ic { width: 46px; height: 46px; margin: 0 auto 14px; color: var(--accent); }
+  .ar-ic svg { width: 100%; height: 100%; stroke: currentColor; fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .ar-card h3 { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+  .ar-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; line-height: 1.45; }
+  .ar-qr { display: flex; justify-content: center; margin-bottom: 16px; }
+  .ar-qr img, .ar-qr canvas { border-radius: 8px; display: block; }
+  .ar-card small { font-size: 11.5px; color: var(--text-muted); line-height: 1.45; display: block; }
   .toast {
     position: absolute; top: 70px; left: 50%; transform: translate(-50%, -20px);
     background: #111111; color: #fff; padding: 8px 16px; border-radius: 20px;
@@ -294,8 +312,8 @@
       <div class="icon-round" id="btn-dims" title="Abmessungen anzeigen">
         <svg viewBox="0 0 24 24"><path d="M21 3H3v18"/><path d="M21 3v18"/><path d="M3 21h18"/><path d="M7 3v3M11 3v3M15 3v3M19 3v3"/><path d="M3 7h3M3 11h3M3 15h3M3 19h3"/></svg>
       </div>
-      <div class="icon-round" id="btn-reset" data-i18n-title="btnReset" title="Ansicht zurücksetzen">
-        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+      <div class="icon-round" id="btn-ar" title="In AR ansehen">
+        <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
       </div>
     </div>
     <div class="toast" id="toast"></div>
@@ -396,6 +414,18 @@
   </aside>
 </div>
 
+<!-- AR: QR modal (desktop) -->
+<div class="ar-modal" id="ar-modal">
+  <div class="ar-card">
+    <div class="ar-close" id="ar-close" aria-label="Schließen">✕</div>
+    <div class="ar-ic"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+    <h3>In deinem Raum ansehen</h3>
+    <p>Scanne den QR-Code mit deinem Handy, um den Tisch per AR in deinem Zimmer zu platzieren.</p>
+    <div class="ar-qr" id="ar-qr"></div>
+    <small>Oder öffne diesen Konfigurator auf deinem Handy und tippe auf den AR-Button.</small>
+  </div>
+</div>
+
 <script type="importmap">
 {
   "imports": {
@@ -410,6 +440,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
 // ============================ CATALOG ============================
 const SETS = {
@@ -996,12 +1027,7 @@ document.querySelectorAll('.acc-head').forEach(h => {
   h.addEventListener('click', () => h.parentElement.classList.toggle('open'));
 });
 
-// Header buttons
-document.getElementById('btn-reset').addEventListener('click', () => {
-  camera.position.set(5.5, 3.2, 6.2);
-  controls.target.set(0, 0.5, 0);
-  controls.update();
-});
+// Viewer action buttons
 document.getElementById('btn-save').addEventListener('click', () => {
   renderer.render(scene, camera);
   const link = document.createElement('a');
@@ -1019,6 +1045,64 @@ document.getElementById('btn-dims').addEventListener('click', () => {
   document.getElementById('btn-dims').classList.toggle('active', dimVisible);
   if (dimVisible) buildDimensions(); else clearDimensions();
 });
+
+// ---- AR: QR modal on desktop, native AR on mobile (like bogade) ----
+const arModal = document.getElementById('ar-modal');
+const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+function loadScriptOnce(flag, attrs) {
+  if (window[flag]) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    Object.assign(s, attrs);
+    s.onload = () => { window[flag] = true; resolve(); };
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function showQrModal() {
+  loadScriptOnce('__qrLoaded', { src: 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js' })
+    .then(() => {
+      const box = document.getElementById('ar-qr');
+      box.innerHTML = '';
+      new window.QRCode(box, { text: location.href, width: 190, height: 190,
+        colorDark: '#1A1A1A', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.M });
+      arModal.classList.add('show');
+    })
+    .catch(() => showToast('QR-Code konnte nicht geladen werden'));
+}
+
+async function launchMobileAR() {
+  try {
+    const exporter = new GLTFExporter();
+    const glb = await exporter.parseAsync(currentRoot, { binary: true, onlyVisible: true });
+    const url = URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' }));
+    await loadScriptOnce('__mvLoaded', { type: 'module',
+      src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
+    let mv = document.getElementById('mv-ar');
+    if (!mv) {
+      mv = document.createElement('model-viewer');
+      mv.id = 'mv-ar';
+      mv.setAttribute('ar', '');
+      mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+      mv.setAttribute('ar-scale', 'fixed');
+      mv.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;';
+      document.body.appendChild(mv);
+    }
+    mv.src = url;
+    const go = () => { try { mv.activateAR(); } catch (e) { showToast('AR auf diesem Gerät nicht verfügbar'); } };
+    if (mv.loaded) go(); else mv.addEventListener('load', go, { once: true });
+  } catch (e) {
+    showToast('AR auf diesem Gerät nicht verfügbar');
+  }
+}
+
+document.getElementById('btn-ar').addEventListener('click', () => {
+  if (isMobileDevice) launchMobileAR(); else showQrModal();
+});
+document.getElementById('ar-close').addEventListener('click', () => arModal.classList.remove('show'));
+arModal.addEventListener('click', e => { if (e.target === arModal) arModal.classList.remove('show'); });
 document.getElementById('cta').addEventListener('click', () => {
   const v = getVariant();
   if (!v) { showToast(t('loadError')); return; }
