@@ -1243,7 +1243,7 @@ function prepareMobileAR() {
       const glbUrl = URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' }));
       let usdzUrl = '';
       try {
-        const usdz = await new USDZExporter().parseAsync(grp);
+        const usdz = await new USDZExporter().parse(grp);
         usdzUrl = URL.createObjectURL(new Blob([usdz], { type: 'model/vnd.usdz+zip' }));
       } catch (e) {}
       await loadScriptOnce('__mvLoaded', { type: 'module',
@@ -1291,7 +1291,7 @@ window.__testExport = async () => {
   } catch (e) { out.glbError = String(e && e.message || e); }
   try {
     const grp2 = buildExportScene();
-    const usdz = await new USDZExporter().parseAsync(grp2);
+    const usdz = await new USDZExporter().parse(grp2);
     out.usdzBytes = (usdz.byteLength != null ? usdz.byteLength : (usdz.length || 0));
   } catch (e) { out.usdzError = String(e && e.message || e); }
   return out;
