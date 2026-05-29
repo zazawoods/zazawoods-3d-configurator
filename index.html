@@ -1206,13 +1206,11 @@ function showQrModal() {
   arModal.classList.add('show');
   const box = document.getElementById('ar-qr');
   box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:30px 0;">…</div>';
-  loadScriptOnce('__qrLoaded', { src: 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js' })
+  loadScriptOnce('__qrLoaded', { src: 'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js' })
     .then(() => {
       box.innerHTML = '';
-      const cv = document.createElement('canvas');
-      box.appendChild(cv);
-      window.QRCode.toCanvas(cv, location.href, { width: 196, margin: 1,
-        color: { dark: '#1A1A1A', light: '#ffffff' } }, err => { if (err) box.textContent = location.href; });
+      new window.QRCode(box, { text: location.href, width: 196, height: 196,
+        colorDark: '#1A1A1A', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.M });
     })
     .catch(() => { box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);word-break:break-all;">' + location.href + '</div>'; });
 }
