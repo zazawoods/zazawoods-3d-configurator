@@ -798,6 +798,46 @@ function repairWoodMaterials(root, setKey) {
   });
 }
 
+// Box-project UVs on the wooden boards so the grain runs ALONG the plank length
+// on every face (top + edges), not across. Uses the non-rotated wood texture
+// (grain along its V axis) and bakes a per-axis scale into fresh UVs.
+const WOOD_SL = 0.42;   // tiles per metre along the grain (length)
+const WOOD_SW = 1.15;   // tiles per metre across the grain (width / thickness)
+function fixWoodUVs(root) {
+  if (!fallbackWoodTex) return;
+  root.traverse(o => {
+    if (!o.isMesh || !o.material) return;
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    const isWood = mats.some(m => m && m.name === 'base table');
+    if (!isWood) return;
+    // Use the upright (non-rotated) wood texture; direction comes from our UVs.
+    mats.forEach(m => { if (m && m.name === 'base table') { m.map = fallbackWoodTex; if (m.map) m.map.rotation = 0; m.needsUpdate = true; } });
+    const g = o.geometry;
+    const pos = g.attributes.position, nrm = g.attributes.normal;
+    if (!pos || !nrm) return;
+    g.computeBoundingBox();
+    const bb = g.boundingBox;
+    const sx = bb.max.x - bb.min.x, sz = bb.max.z - bb.min.z;
+    const Lz = (sz >= sx);                 // length runs along Z (else X)
+    const uv = new Float32Array(pos.count * 2);
+    for (let i = 0; i < pos.count; i++) {
+      const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
+      const nx = Math.abs(nrm.getX(i)), ny = Math.abs(nrm.getY(i)), nz = Math.abs(nrm.getZ(i));
+      const L = Lz ? pz : px;              // coord along length
+      const W = Lz ? px : pz;             // coord across width
+      const nW = Lz ? nx : nz;            // normal component across width
+      const nL = Lz ? nz : nx;            // normal component along length
+      let u, v;
+      if (ny >= nx && ny >= nz) { u = W * WOOD_SW; v = L * WOOD_SL; }   // top / bottom
+      else if (nW >= nL)        { u = py * WOOD_SW; v = L * WOOD_SL; }  // long side edge
+      else                      { u = W * WOOD_SW; v = py * WOOD_SL; }  // short end
+      uv[i * 2] = u; uv[i * 2 + 1] = v;
+    }
+    g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    g.attributes.uv.needsUpdate = true;
+  });
+}
+
 function base64ToArrayBuffer(b64) {
   const bin = atob(b64);
   const len = bin.length;
@@ -820,6 +860,7 @@ function loadSet(key) {
     const handle = gltf => {
       gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       repairWoodMaterials(gltf.scene, key);
+      fixWoodUVs(gltf.scene);
       cache[cfg.file] = gltf.scene;
       resolve(gltf.scene);
     };
