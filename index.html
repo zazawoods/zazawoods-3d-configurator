@@ -358,17 +358,17 @@
   <aside class="panel">
     <div class="panel-scroll">
 
-      <!-- 1. Model -->
+      <!-- 1. Gestell -->
       <div class="acc open" data-acc="model">
         <div class="acc-head">
           <div class="acc-icon">
             <svg viewBox="0 0 24 24"><path d="M3 10h18M5 10v8M19 10v8M3 18h18M6 6l3 4M18 6l-3 4"/></svg>
           </div>
-          <div class="acc-title"><b data-i18n="model">Modell</b><span id="sub-set">Angle Set</span></div>
+          <div class="acc-title"><b>Gestell</b><span id="sub-set">W</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <div class="acc-body">
-          <div class="opt-grid" id="set-grid"></div>
+          <div class="chips" id="set-grid"></div>
         </div>
       </div>
 
@@ -387,14 +387,6 @@
         </div>
       </div>
 
-
-      <!-- Materiaal — fixed: Douglas Natural -->
-      <div class="acc" data-acc="finish">
-        <div class="acc-head" style="cursor:default">
-          <div class="acc-icon wood"></div>
-          <div class="acc-title"><b data-i18n="material">Material</b><span data-i18n="materialValue">Douglasienholz</span></div>
-        </div>
-      </div>
 
       <!-- Sitzbank (only for U / X) -->
       <div class="acc open" data-acc="bench" id="acc-bench">
@@ -421,6 +413,14 @@
         </div>
         <div class="acc-body">
           <div class="chips" id="backrest-chips"></div>
+        </div>
+      </div>
+
+      <!-- Material — fixed: Douglasienholz (now under Rückenlehne) -->
+      <div class="acc" data-acc="finish">
+        <div class="acc-head" style="cursor:default">
+          <div class="acc-icon wood" id="acc-mat-swatch"></div>
+          <div class="acc-title"><b>Material</b><span>Douglasienholz</span></div>
         </div>
       </div>
 
@@ -764,6 +764,14 @@ function loadFallbackWood() {
       rot.rotation = Math.PI / 2;
       rot.needsUpdate = true;
       fallbackWoodTexRotated = rot;
+      // Use the real wood image as the Material swatch in the panel
+      const swatch = document.getElementById('acc-mat-swatch');
+      if (swatch) {
+        swatch.style.background = 'none';
+        swatch.style.backgroundImage = 'url(' + WOOD_TEX_DATA_URL + ')';
+        swatch.style.backgroundSize = 'cover';
+        swatch.style.backgroundPosition = 'center';
+      }
       resolve();
     };
     img.onerror = () => resolve();   // continue even if image fails
@@ -1054,10 +1062,10 @@ function buildSetGrid() {
   grid.innerHTML = '';
   SET_ORDER.forEach(k => {
     const cfg = SETS[k];
-    const card = document.createElement('div');
-    card.className = 'opt-card' + (k === state.set ? ' active' : '');
-    card.innerHTML = `<div class="opt-ic">${cfg.icon}</div><div class="opt-name">${cfg.name}</div>`;
-    card.addEventListener('click', async () => {
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (k === state.set ? ' active' : '');
+    chip.textContent = cfg.name;
+    chip.addEventListener('click', async () => {
       state.set = k;
       if (!SETS[k].lengths.includes(state.length)) {
         state.length = SETS[k].lengths[Math.floor(SETS[k].lengths.length / 2)];
@@ -1065,7 +1073,7 @@ function buildSetGrid() {
       buildSetGrid(); buildLengthChips(); buildBenchChips(); buildBackrestChips(); updateBenchSection();
       await setActiveSet(k);
     });
-    grid.appendChild(card);
+    grid.appendChild(chip);
   });
 }
 
