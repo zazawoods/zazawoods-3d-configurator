@@ -681,7 +681,7 @@ const pmrem = new THREE.PMREMGenerator(renderer);
 scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
-camera.position.set(5.5, 3.2, 6.2);
+camera.position.set(4.6, 2.8, 5.2);   // a bit closer by default
 
 // Lights
 const key = new THREE.DirectionalLight(0xfff2dc, 1.7);
