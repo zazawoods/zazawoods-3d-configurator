@@ -14,6 +14,10 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  // Restrict who can embed us in an iframe (clickjacking defence). We still
+  // allow our own railway.app origin so the standalone URL works.
+  res.setHeader('Content-Security-Policy',
+    "frame-ancestors 'self' https://zazawoods.de https://*.zazawoods.de https://*.myshopify.com");
   next();
 });
 

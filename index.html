@@ -1567,11 +1567,11 @@ updateWizard();
 // model, so material repair has something to substitute in.
 loadFallbackWood().then(() => {
   if (state.set) setActiveSet(state.set);
-  // Silently prime the HTTP cache for both GLB files so picking a Gestell
-  // mostly hits the cache (no slow network).
-  ['angle.glb', 'picknick.glb'].forEach(f => {
-    fetch(f, { cache: 'force-cache' }).catch(() => {});
-  });
+  // Prefetch angle.glb (small, 2.2 MB) right away so W is instant.
+  // Defer picknick.glb (6.25 MB) by a few seconds to keep the initial
+  // page lightweight — visitors who never reach step 3 don't pay for it.
+  fetch('angle.glb', { cache: 'force-cache' }).catch(() => {});
+  setTimeout(() => { fetch('picknick.glb', { cache: 'force-cache' }).catch(() => {}); }, 3500);
 });
 
 // ============================ DIMENSIONS OVERLAY ============================
