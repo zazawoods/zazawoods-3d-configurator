@@ -73,7 +73,7 @@ function loadGLB(url) {
 }
 
 // Downscale every texture in a scene to <=512 once (keeps export files small)
-function downscaleTextures(root, max = 512) {
+function downscaleTextures(root, max = 256) {
   const seen = new Set();
   root.traverse(o => {
     if (!o.isMesh) return;
@@ -182,7 +182,7 @@ function buildConfig(src, cfg) {
 async function exportConfig(src, cfg) {
   const grp = buildConfig(src, cfg);
   const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
-  const usdz = await new USDZExporter().parse(grp);
+  const usdz = await new USDZExporter().parse(grp, { maxTextureSize: 256, quality: 0.7 });
   return { glb, usdz };
 }
 
