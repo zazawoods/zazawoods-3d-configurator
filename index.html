@@ -768,10 +768,9 @@ function loadFallbackWood() {
       const swatch = document.getElementById('acc-mat-swatch');
       if (swatch) {
         swatch.style.background = 'none';
-        swatch.style.backgroundImage = 'url(' + WOOD_TEX_DATA_URL + ')';
+        swatch.style.backgroundImage = "url('/material-douglas.jpg')";
         swatch.style.backgroundSize = 'cover';
         swatch.style.backgroundPosition = 'center';
-        swatch.style.transform = 'rotate(90deg)';   // grain runs vertically
       }
       resolve();
     };
