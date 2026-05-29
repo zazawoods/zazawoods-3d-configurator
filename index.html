@@ -814,10 +814,9 @@ const WOOD_SL = 0.42;   // tiles per metre along the grain (length)
 const WOOD_SW = 1.15;   // tiles per metre across the grain (width / thickness)
 function fixWoodUVs(root, setKey) {
   if (!fallbackWoodTex) return;
-  // Force the same length axis for ALL wood meshes in the set (otherwise short
-  // benches whose width is greater than their length pick the wrong axis).
-  const isPicknick = setKey && setKey.startsWith('picknick');
-  const Lz = !isPicknick;                  // W → Z, picknick → X
+  // Both GLBs use Z as the length axis. Force it uniformly so combined
+  // benches whose local X is greater than Z (short W set) don't flip the grain.
+  const Lz = true;
   root.traverse(o => {
     if (!o.isMesh || !o.material) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
@@ -907,7 +906,6 @@ async function setActiveSet(setKey) {
     return;
   }
   currentRoot = root;
-  window.__cr = root;  // debug
   scene.add(root);
   // First-time normalisation so model sits on ground at the origin
   root.position.set(0, 0, 0);
