@@ -812,8 +812,12 @@ function repairWoodMaterials(root, setKey) {
 // (grain along its V axis) and bakes a per-axis scale into fresh UVs.
 const WOOD_SL = 0.42;   // tiles per metre along the grain (length)
 const WOOD_SW = 1.15;   // tiles per metre across the grain (width / thickness)
-function fixWoodUVs(root) {
+function fixWoodUVs(root, setKey) {
   if (!fallbackWoodTex) return;
+  // Force the same length axis for ALL wood meshes in the set (otherwise short
+  // benches whose width is greater than their length pick the wrong axis).
+  const isPicknick = setKey && setKey.startsWith('picknick');
+  const Lz = !isPicknick;                  // W → Z, picknick → X
   root.traverse(o => {
     if (!o.isMesh || !o.material) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
@@ -824,10 +828,6 @@ function fixWoodUVs(root) {
     const g = o.geometry;
     const pos = g.attributes.position, nrm = g.attributes.normal;
     if (!pos || !nrm) return;
-    g.computeBoundingBox();
-    const bb = g.boundingBox;
-    const sx = bb.max.x - bb.min.x, sz = bb.max.z - bb.min.z;
-    const Lz = (sz >= sx);                 // length runs along Z (else X)
     const uv = new Float32Array(pos.count * 2);
     for (let i = 0; i < pos.count; i++) {
       const px = pos.getX(i), py = pos.getY(i), pz = pos.getZ(i);
@@ -871,7 +871,7 @@ function loadSet(key) {
     const handle = gltf => {
       gltf.scene.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       repairWoodMaterials(gltf.scene, key);
-      fixWoodUVs(gltf.scene);
+      fixWoodUVs(gltf.scene, key);
       cache[cfg.file] = gltf.scene;
       resolve(gltf.scene);
     };
