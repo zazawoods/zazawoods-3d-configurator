@@ -20,8 +20,20 @@
   <p id="sub">Einen Moment bitte</p>
   <a id="arl" class="btn" style="display:none">In AR öffnen</a>
 <script>
+  // Only accept URLs that are an absolute path on this same origin
+  // OR an absolute URL pointing back to this same origin. This blocks
+  // ?u=javascript:... and any cross-origin redirect via the QR/link.
+  function safeUrl(s) {
+    if (!s) return null;
+    try {
+      var url = new URL(s, location.origin);
+      if (url.origin !== location.origin) return null;
+      if (url.pathname.indexOf('/ar/') !== 0) return null;   // must be a model from /ar/
+      return url.toString();
+    } catch (e) { return null; }
+  }
   var q = new URLSearchParams(location.search);
-  var u = q.get('u'), g = q.get('g');
+  var u = safeUrl(q.get('u')), g = safeUrl(q.get('g'));
   var ua = navigator.userAgent;
   var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   var target = null;

@@ -1185,20 +1185,31 @@ function renderSavedList() {
     return;
   }
   items.forEach(it => {
-    const row = document.createElement('div');
-    row.className = 'saved-item';
-    row.innerHTML = `<img src="${it.thumb || ''}" alt="">`
-      + `<div class="si-txt"><div class="si-name">${it.name}</div><div class="si-sub">${it.sub}</div></div>`
-      + `<div class="si-del" title="Löschen">✕</div>`;
-    row.querySelector('.si-del').addEventListener('click', e => {
+    const row = document.createElement('div'); row.className = 'saved-item';
+    const img = document.createElement('img'); img.alt = '';
+    if (it.thumb && /^data:image\//.test(it.thumb)) img.src = it.thumb;  // only data: URIs
+    const txt = document.createElement('div'); txt.className = 'si-txt';
+    const nm = document.createElement('div'); nm.className = 'si-name'; nm.textContent = it.name || '';
+    const sb = document.createElement('div'); sb.className = 'si-sub';  sb.textContent = it.sub  || '';
+    txt.appendChild(nm); txt.appendChild(sb);
+    const del = document.createElement('div'); del.className = 'si-del'; del.title = 'Löschen'; del.textContent = '✕';
+    row.appendChild(img); row.appendChild(txt); row.appendChild(del);
+    del.addEventListener('click', e => {
       e.stopPropagation();
       persistSaved(loadSaved().filter(x => x.id !== it.id));
       renderSavedList();
     });
     row.addEventListener('click', async () => {
+      // Only restore values that match the catalog (defense-in-depth against tampered localStorage).
+      if (!it.cfg || !SET_ORDER.includes(it.cfg.set)) return;
+      const cfg = SETS[it.cfg.set];
+      if (!cfg.lengths.includes(it.cfg.length)) return;
+      state.material = 'douglas';
       state.set = it.cfg.set; state.length = it.cfg.length;
-      state.benches = it.cfg.benches; state.backrests = it.cfg.backrests;
+      state.benches = [0,1,2].includes(it.cfg.benches) ? it.cfg.benches : 2;
+      state.backrests = [0,1,2].includes(it.cfg.backrests) ? it.cfg.backrests : 0;
       buildSetGrid(); buildLengthChips(); buildBenchChips(); buildBackrestChips(); updateBenchSection();
+      updateUI(); if (typeof updateWizard === 'function') updateWizard();
       await setActiveSet(state.set);
       saveModal.classList.remove('show');
     });
