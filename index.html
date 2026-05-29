@@ -1185,12 +1185,13 @@ function buildDimensions() {
   }
 
   const V = (x, y, z) => new THREE.Vector3(x, y, z);
+  const top = mx.y + pad;                           // length floats in the air above the table
   if (sz >= sx) {                                   // length runs along Z
-    addDim(V(mx.x + pad, mn.y, mn.z), V(mx.x + pad, mn.y, mx.z), state.length + ' cm');
+    addDim(V(mx.x + pad, top, mn.z), V(mx.x + pad, top, mx.z), state.length + ' cm');
     addDim(V(mn.x, mn.y, mn.z - pad), V(mx.x, mn.y, mn.z - pad), cfg.width + ' cm');
     addDim(V(mx.x + pad, mn.y, mx.z), V(mx.x + pad, mx.y, mx.z), cfg.height + ' cm');
   } else {                                          // length runs along X
-    addDim(V(mn.x, mn.y, mx.z + pad), V(mx.x, mn.y, mx.z + pad), state.length + ' cm');
+    addDim(V(mn.x, top, mx.z + pad), V(mx.x, top, mx.z + pad), state.length + ' cm');
     addDim(V(mx.x + pad, mn.y, mn.z), V(mx.x + pad, mn.y, mx.z), cfg.width + ' cm');
     addDim(V(mx.x + pad, mn.y, mx.z + pad), V(mx.x + pad, mx.y, mx.z + pad), cfg.height + ' cm');
   }
