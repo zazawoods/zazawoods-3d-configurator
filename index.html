@@ -1280,6 +1280,22 @@ function launchMobileAR() {
 document.getElementById('btn-ar').addEventListener('click', () => {
   if (isMobileDevice) launchMobileAR(); else showQrModal();
 });
+// TEMP debug hook to validate the export pipeline from the console.
+window.__testExport = async () => {
+  const out = {};
+  try {
+    const grp = buildExportScene();
+    out.meshes = grp.children.length;
+    const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
+    out.glbBytes = glb.byteLength;
+  } catch (e) { out.glbError = String(e && e.message || e); }
+  try {
+    const grp2 = buildExportScene();
+    const usdz = await new USDZExporter().parseAsync(grp2);
+    out.usdzBytes = (usdz.byteLength != null ? usdz.byteLength : (usdz.length || 0));
+  } catch (e) { out.usdzError = String(e && e.message || e); }
+  return out;
+};
 document.getElementById('ar-close').addEventListener('click', () => arModal.classList.remove('show'));
 arModal.addEventListener('click', e => { if (e.target === arModal) arModal.classList.remove('show'); });
 document.getElementById('cta').addEventListener('click', () => {
