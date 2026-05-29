@@ -498,6 +498,7 @@ import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { USDZExporter } from 'three/addons/exporters/USDZExporter.js';
 
 // ============================ CATALOG ============================
 const SETS = {
@@ -975,6 +976,7 @@ function applyState() {
   recenter();
   applyBackrestClip();
   if (dimVisible) buildDimensions();
+  if (typeof prepareMobileAR === 'function') prepareMobileAR();
 }
 
 // Re-centre model: shift X/Z so visible bbox center is at origin, Y so it sits on ground
@@ -1185,7 +1187,8 @@ document.getElementById('btn-dims').addEventListener('click', () => {
 
 // ---- AR: QR modal on desktop, native AR on mobile (like bogade) ----
 const arModal = document.getElementById('ar-modal');
-const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
 
 function loadScriptOnce(flag, attrs) {
   if (window[flag]) return Promise.resolve();
@@ -1198,41 +1201,82 @@ function loadScriptOnce(flag, attrs) {
   });
 }
 
+// QR code from jsdelivr (same CDN as three.js — not blocked by ad blockers)
 function showQrModal() {
-  loadScriptOnce('__qrLoaded', { src: 'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js' })
+  arModal.classList.add('show');
+  const box = document.getElementById('ar-qr');
+  box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);padding:30px 0;">…</div>';
+  loadScriptOnce('__qrLoaded', { src: 'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js' })
     .then(() => {
-      const box = document.getElementById('ar-qr');
       box.innerHTML = '';
-      new window.QRCode(box, { text: location.href, width: 190, height: 190,
-        colorDark: '#1A1A1A', colorLight: '#ffffff', correctLevel: window.QRCode.CorrectLevel.M });
-      arModal.classList.add('show');
+      const cv = document.createElement('canvas');
+      box.appendChild(cv);
+      window.QRCode.toCanvas(cv, location.href, { width: 196, margin: 1,
+        color: { dark: '#1A1A1A', light: '#ffffff' } }, err => { if (err) box.textContent = location.href; });
     })
-    .catch(() => showToast('QR-Code konnte nicht geladen werden'));
+    .catch(() => { box.innerHTML = '<div style="font-size:12px;color:var(--text-muted);word-break:break-all;">' + location.href + '</div>'; });
 }
 
-async function launchMobileAR() {
-  try {
-    const exporter = new GLTFExporter();
-    const glb = await exporter.parseAsync(currentRoot, { binary: true, onlyVisible: true });
-    const url = URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' }));
-    await loadScriptOnce('__mvLoaded', { type: 'module',
-      src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
-    let mv = document.getElementById('mv-ar');
-    if (!mv) {
-      mv = document.createElement('model-viewer');
-      mv.id = 'mv-ar';
-      mv.setAttribute('ar', '');
-      mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-      mv.setAttribute('ar-scale', 'fixed');
-      mv.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;';
-      document.body.appendChild(mv);
-    }
-    mv.src = url;
-    const go = () => { try { mv.activateAR(); } catch (e) { showToast('AR auf diesem Gerät nicht verfügbar'); } };
-    if (mv.loaded) go(); else mv.addEventListener('load', go, { once: true });
-  } catch (e) {
-    showToast('AR auf diesem Gerät nicht verfügbar');
+// Flatten the currently-visible meshes (with baked world transforms) for export.
+function buildExportScene() {
+  const grp = new THREE.Group();
+  currentRoot.updateMatrixWorld(true);
+  currentRoot.traverse(o => {
+    if (!o.isMesh) return;
+    let p = o, ok = true;
+    while (p && p !== scene) { if (!p.visible) { ok = false; break; } p = p.parent; }
+    if (!ok) return;
+    const m = o.clone();
+    m.applyMatrix4(o.matrixWorld);
+    grp.add(m);
+  });
+  return grp;
+}
+
+// Pre-build AR assets (GLB for Android, USDZ for iPhone) so AR can start in the tap gesture.
+let arReady = false, arPrep = null;
+function prepareMobileAR() {
+  if (!isMobileDevice || !currentRoot) return;
+  clearTimeout(prepareMobileAR._t);
+  prepareMobileAR._t = setTimeout(async () => {
+    try {
+      const grp = buildExportScene();
+      const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
+      const glbUrl = URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' }));
+      let usdzUrl = '';
+      try {
+        const usdz = await new USDZExporter().parseAsync(grp);
+        usdzUrl = URL.createObjectURL(new Blob([usdz], { type: 'model/vnd.usdz+zip' }));
+      } catch (e) {}
+      await loadScriptOnce('__mvLoaded', { type: 'module',
+        src: 'https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js' });
+      let mv = document.getElementById('mv-ar');
+      if (!mv) {
+        mv = document.createElement('model-viewer');
+        mv.id = 'mv-ar';
+        mv.setAttribute('ar', '');
+        mv.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+        mv.setAttribute('ar-scale', 'fixed');
+        mv.setAttribute('camera-controls', '');
+        mv.style.cssText = 'position:fixed;left:-9999px;width:300px;height:300px;';
+        document.body.appendChild(mv);
+      }
+      mv.src = glbUrl;
+      if (usdzUrl) mv.setAttribute('ios-src', usdzUrl);
+      arReady = true;
+    } catch (e) { arReady = false; }
+  }, 250);
+}
+if (isMobileDevice) prepareMobileAR();
+
+function launchMobileAR() {
+  const mv = document.getElementById('mv-ar');
+  if (mv && (mv.canActivateAR || mv.src)) {
+    try { mv.activateAR(); return; } catch (e) {}
   }
+  // Not ready yet → prepare and ask the user to tap again
+  prepareMobileAR();
+  showToast('AR wird vorbereitet … bitte erneut tippen');
 }
 
 document.getElementById('btn-ar').addEventListener('click', () => {
