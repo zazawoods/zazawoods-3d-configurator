@@ -1514,8 +1514,11 @@ function updateWizard() {
 
   // Sub-labels
   document.getElementById('sub-mat').textContent = matDone ? 'Douglasienholz' : '–';
-  if (!setDone) document.getElementById('sub-set').textContent = '–';
-  if (!lenDone) document.getElementById('sub-length').textContent = '–';
+  // Sub-Gestell: name if picked, else dash
+  document.getElementById('sub-set').textContent = setDone ? SETS[state.set].name : '–';
+  // Sub-Abmessung: show length right away even if Gestell isn't picked yet
+  if (lenDone && !setDone)      document.getElementById('sub-length').textContent = state.length + ' cm';
+  else if (!lenDone)            document.getElementById('sub-length').textContent = '–';
   if (!modelReady) document.getElementById('sub-bench').textContent = '–';
   if (!modelReady) document.getElementById('sub-backrest').textContent = '–';
 
