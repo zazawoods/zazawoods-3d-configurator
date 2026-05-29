@@ -4,7 +4,7 @@
   "description": "Zaza Woods 3D furniture configurator — self-contained static site",
   "private": true,
   "scripts": {
-    "start": "serve -s . -l ${PORT:-3000}"
+    "start": "serve . -l ${PORT:-3000}"
   },
   "dependencies": {
     "serve": "^14.2.4"
