@@ -9,6 +9,14 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ---------------- Baseline security headers ----------------
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  next();
+});
+
 // ---------------- AR upload store (in-memory, capped) ----------------
 const store = new Map(); // file -> { buf, type, exp }
 const TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
