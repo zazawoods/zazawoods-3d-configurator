@@ -896,7 +896,6 @@ async function setActiveSet(setKey) {
     return;
   }
   currentRoot = root;
-  window.__cr = root;  // debug
   scene.add(root);
   // First-time normalisation so model sits on ground at the origin
   root.position.set(0, 0, 0);
