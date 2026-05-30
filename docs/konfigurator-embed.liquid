@@ -1,0 +1,126 @@
+{%- comment -%}
+  Zaza Woods 3D Configurator — Shopify section (fullscreen iframe)
+  ----------------------------------------------------------------
+  Bricht aus dem Theme-Container (Codixel-Wrapper) aus und füllt die
+  komplette Viewport-Breite. Standardmäßig: kein Titel, kein Rand,
+  voller Bildschirm.
+
+  Kopiere den Inhalt in den Theme-Editor →
+  Sections → konfigurator-embed.liquid → ALLES ersetzen → Save.
+{%- endcomment -%}
+
+<style>
+  /* Aus dem Theme-Container ausbrechen: 100vw breit, egal in welchem Wrapper.
+     Negative Margin = (50% des Wrappers) − 50vw, das verschiebt den linken
+     Rand der Section so weit nach links, dass er am Viewport-Rand sitzt. */
+  .zw-config-section {
+    position: relative;
+    width: 100vw;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    background: {{ section.settings.bg_color }};
+    padding: {{ section.settings.padding_top }}px 0 {{ section.settings.padding_bottom }}px 0;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  .zw-config-wrap {
+    width: 100%;
+    {% if section.settings.max_width > 0 %}max-width: {{ section.settings.max_width }}px; margin: 0 auto;{% endif %}
+    {% if section.settings.h_padding > 0 %}padding: 0 {{ section.settings.h_padding }}px; box-sizing: border-box;{% endif %}
+  }
+  .zw-config-frame {
+    display: block;
+    width: 100%;
+    height: {{ section.settings.desktop_height }}vh;
+    height: {{ section.settings.desktop_height }}dvh;
+    min-height: 600px;
+    border: 0;
+    background: #F7F6F3;
+    {% if section.settings.radius > 0 %}border-radius: {{ section.settings.radius }}px; overflow: hidden;{% endif %}
+  }
+  @media (max-width: 860px) {
+    .zw-config-frame {
+      height: {{ section.settings.mobile_height }}vh;
+      height: {{ section.settings.mobile_height }}dvh;
+      min-height: 520px;
+    }
+  }
+  .zw-config-title { font-size: 28px; font-weight: 600; margin: 0 0 12px;
+    color: #1A1A1A; text-align: {{ section.settings.title_align }}; }
+  .zw-config-sub   { font-size: 15px; color: #6B6B6B; margin: 0 0 20px;
+    text-align: {{ section.settings.title_align }}; }
+</style>
+
+<div class="zw-config-section">
+  <div class="zw-config-wrap">
+    {%- if section.settings.title != blank -%}
+      <h2 class="zw-config-title">{{ section.settings.title }}</h2>
+    {%- endif -%}
+    {%- if section.settings.subtitle != blank -%}
+      <p class="zw-config-sub">{{ section.settings.subtitle }}</p>
+    {%- endif -%}
+
+    <iframe
+      class="zw-config-frame"
+      src="https://zazawoods-3d-configurator-production.up.railway.app/{%- if section.settings.preselect_set != blank -%}?set={{ section.settings.preselect_set }}{%- if section.settings.preselect_length != blank -%}&length={{ section.settings.preselect_length }}{%- endif -%}{%- endif -%}"
+      title="Zaza Woods 3D-Konfigurator"
+      loading="lazy"
+      referrerpolicy="strict-origin-when-cross-origin"
+      allow="camera; xr-spatial-tracking"
+    ></iframe>
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "3D Konfigurator",
+  "tag": "section",
+  "class": "zw-config-section-shopify",
+  "settings": [
+    { "type": "header", "content": "Überschrift (standardmäßig aus)" },
+    { "type": "text",      "id": "title",        "label": "Titel" },
+    { "type": "textarea",  "id": "subtitle",     "label": "Untertitel" },
+    { "type": "select",    "id": "title_align",  "label": "Titel-Ausrichtung", "options": [
+        { "value": "left",   "label": "Links" },
+        { "value": "center", "label": "Zentriert" },
+        { "value": "right",  "label": "Rechts" }
+      ], "default": "center" },
+
+    { "type": "header", "content": "Größe & Abstände" },
+    { "type": "range", "id": "max_width",         "label": "Max. Breite (px, 0 = volle Breite)", "min": 0,   "max": 1800, "step": 20, "default": 0 },
+    { "type": "range", "id": "desktop_height",    "label": "Höhe Desktop (vh)",                  "min": 60,  "max": 100,  "step": 1,  "default": 95 },
+    { "type": "range", "id": "mobile_height",     "label": "Höhe Mobil (vh)",                    "min": 70,  "max": 100,  "step": 1,  "default": 92 },
+    { "type": "range", "id": "padding_top",       "label": "Abstand oben (px)",                  "min": 0,   "max": 120,  "step": 4,  "default": 0 },
+    { "type": "range", "id": "padding_bottom",    "label": "Abstand unten (px)",                 "min": 0,   "max": 120,  "step": 4,  "default": 0 },
+    { "type": "range", "id": "h_padding",         "label": "Seitenabstand (px)",                 "min": 0,   "max": 60,   "step": 2,  "default": 0 },
+    { "type": "range", "id": "radius",            "label": "Eckenradius (px)",                   "min": 0,   "max": 24,   "step": 2,  "default": 0 },
+    { "type": "color", "id": "bg_color",          "label": "Section-Hintergrund",                "default": "#F7F6F3" },
+
+    { "type": "header", "content": "Optional: Vorauswahl beim Öffnen" },
+    { "type": "select", "id": "preselect_set", "label": "Gestell vorwählen", "options": [
+        { "value": "",                  "label": "— Wizard zeigen —" },
+        { "value": "angle",             "label": "W (Picknicktisch)" },
+        { "value": "picknick_Ushape",   "label": "U (Gartentisch U-Form)" },
+        { "value": "picknick_Xshape",   "label": "X (Gartentisch X-Form)" }
+      ], "default": "" },
+    { "type": "select", "id": "preselect_length", "label": "Länge vorwählen", "options": [
+        { "value": "",    "label": "— keine Vorauswahl —" },
+        { "value": "160", "label": "160 cm" },
+        { "value": "180", "label": "180 cm" },
+        { "value": "200", "label": "200 cm" },
+        { "value": "220", "label": "220 cm" },
+        { "value": "240", "label": "240 cm" },
+        { "value": "260", "label": "260 cm" },
+        { "value": "280", "label": "280 cm" },
+        { "value": "300", "label": "300 cm" },
+        { "value": "350", "label": "350 cm" },
+        { "value": "400", "label": "400 cm" }
+      ], "default": "" }
+  ],
+  "presets": [
+    { "name": "3D Konfigurator" }
+  ]
+}
+{% endschema %}

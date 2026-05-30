@@ -1,0 +1,53 @@
+<!--
+  Zaza Woods 3D-Konfigurator – Embed-Snippet
+  Kopiere den folgenden Code in deine Shopify-Seite (z. B. unter "Custom Liquid"
+  oder direkt im Theme-Editor in ein „Code"- / „HTML"-Block).
+
+  Funktioniert sofort. Höhe kann nach Bedarf angepasst werden.
+-->
+
+<div class="zaza-config-wrap" style="position:relative; width:100%; max-width:1400px; margin:0 auto;">
+  <iframe
+    src="https://zazawoods-3d-configurator-production.up.railway.app/"
+    title="Zaza Woods 3D-Konfigurator"
+    style="display:block; width:100%; height:760px; border:0; background:#F7F6F3;"
+    allow="camera; xr-spatial-tracking"
+    loading="lazy"
+    referrerpolicy="strict-origin-when-cross-origin"
+  ></iframe>
+</div>
+
+<!--
+  Hinweise:
+
+  • Höhe: 760px ist ein guter Desktop-Wert. Für sehr breite Layouts kannst du
+    Höhe und max-width nach Geschmack anpassen.
+
+  • Mobil: der Konfigurator passt sich automatisch an. Höhe auf Handy kann z. B.
+    100dvh sein, wenn du ihn als Vollbild zeigen möchtest:
+
+        <style>
+          @media (max-width: 860px) {
+            .zaza-config-wrap iframe { height: 95vh; height: 95dvh; }
+          }
+        </style>
+
+  • Sicherheit: der Server hat eine Content-Security-Policy gesetzt, die das
+    Einbetten nur auf zazawoods.de und Shopify-Domains erlaubt. Auf anderen
+    Domains wird das iframe vom Browser blockiert – also Clickjacking-sicher.
+
+  • Performance: angle.glb (W-Modell, 2,2 MB) wird sofort vorgeladen, picknick.glb
+    (U/X-Modell, 6,3 MB) erst nach 3,5 Sekunden, damit der erste Seitenaufruf
+    leicht bleibt.
+
+  • Warenkorb: beim Klick auf „In den Warenkorb" wird das Top-Fenster (also
+    deine zazawoods.de-Seite) zur richtigen Cart-Permalink-URL umgeleitet, mit
+    der gewählten Shopify-Variante. Funktioniert ohne weitere Konfiguration.
+
+  • Optional – mit Vorauswahl starten: Wenn du Links wie
+    https://deine-seite.de/configurator-page?set=angle&length=300&backrests=1
+    teilen möchtest, kannst du im Theme-Editor die URL-Parameter dynamisch an
+    den iframe src anhängen (Liquid- oder JS-Lösung) – dann öffnet sich der
+    Konfigurator direkt mit der geteilten Konfiguration und überspringt den
+    Wizard.
+-->
