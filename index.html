@@ -148,12 +148,12 @@
 
   /* Panel */
   .panel {
-    width: 420px;
+    width: 460px;
     background: #F7F6F3;
     display: flex; flex-direction: column;
     overflow: hidden;
   }
-  .panel-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 8px; }
+  .panel-scroll { flex: 1; overflow-y: auto; padding: 20px 26px 10px; }
   .panel-scroll::-webkit-scrollbar { width: 6px; }
   .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   .panel-foot { padding: 14px 20px 18px; border-top: 1px solid var(--border); }
@@ -163,16 +163,16 @@
     overflow: hidden; border-bottom: 1px solid var(--border); }
   .acc:last-of-type { border-bottom: none; }
   .acc-head {
-    display: flex; align-items: center; gap: 14px;
-    padding: 16px 2px; cursor: pointer;
+    display: flex; align-items: center; gap: 16px;
+    padding: 20px 4px; cursor: pointer;
   }
   .acc-icon {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 46px; height: 46px; border-radius: 50%;
     background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow);
     display:flex; align-items:center; justify-content:center; flex: none;
   }
-  .acc-icon svg { width: 22px; height: 22px; stroke: var(--text); fill: none; stroke-width: 1.4; }
-  .acc-icon .step-num { font-size: 14px; font-weight: 700; color: var(--text); line-height: 1; }
+  .acc-icon svg { width: 24px; height: 24px; stroke: var(--text); fill: none; stroke-width: 1.4; }
+  .acc-icon .step-num { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1; }
   .acc.locked > .acc-head { opacity: .42; pointer-events: none; cursor: default; }
   .acc.locked > .acc-body { display: none !important; }
   .viewer-empty {
@@ -184,8 +184,8 @@
   .panel-foot.hidden-foot { display: none; }
   .acc-icon.wood { background: linear-gradient(135deg, #D8A06A, #9C6A3C); border-color: transparent; }
   .acc-title { flex: 1; }
-  .acc-title b { font-size: 14.5px; font-weight: 600; display: block; }
-  .acc-title span { font-size: 12.5px; color: var(--text-muted); }
+  .acc-title b { font-size: 16px; font-weight: 600; display: block; }
+  .acc-title span { font-size: 13.5px; color: var(--text-muted); }
   .acc-arrow {
     width: 14px; height: 14px; transition: transform .2s;
     stroke: var(--text-muted); fill: none; stroke-width: 2;
@@ -213,13 +213,13 @@
   .opt-card.active .opt-name { color: var(--accent); font-weight: 500; }
 
   /* Length chips */
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip {
-    padding: 7px 11px; border-radius: 8px;
+    padding: 9px 14px; border-radius: 8px;
     border: 2px solid var(--border); background: #fff;
-    font-size: 12.5px; cursor: pointer;
+    font-size: 13.5px; cursor: pointer;
     transition: all .15s;
-    min-width: 56px; text-align: center;
+    min-width: 64px; text-align: center;
   }
   .chip:hover { border-color: var(--accent); }
   .chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--text); font-weight: 500; }
@@ -288,10 +288,10 @@
 
   /* Wide monitors — slightly roomier control panel */
   @media (min-width: 1700px) {
-    .panel { width: 500px; }
+    .panel { width: 560px; }
   }
   @media (min-width: 2200px) {
-    .panel { width: 560px; }
+    .panel { width: 640px; }
   }
 
   /* Tablets & phones — stack the 3D view on top, controls below */
@@ -720,15 +720,25 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Controls
+// Controls — tuned for smooth, gentle zoom inside an iframe.
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.dampingFactor = 0.08;
+controls.dampingFactor = 0.14;   // more inertia = smoother feel
 controls.target.set(0, 0.5, 0);
 controls.minDistance = 1.5;
-controls.maxDistance = 22;
-controls.zoomSpeed = 0.7;
+controls.maxDistance = 18;
+controls.zoomSpeed = 0.35;       // small step per wheel tick
+controls.rotateSpeed = 0.85;
+controls.panSpeed = 0.7;
 controls.maxPolarAngle = Math.PI / 2 - 0.04;
+
+// Prevent wheel events on the viewer from scrolling the parent page when the
+// configurator is embedded in an iframe (Shopify etc.). The canvas already
+// handles wheel for zoom; this just stops the event from leaking outside.
+document.querySelector('.viewer').addEventListener('wheel', e => {
+  e.preventDefault();
+  e.stopPropagation();
+}, { passive: false });
 
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
