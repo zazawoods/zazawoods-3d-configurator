@@ -720,25 +720,47 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// Controls — tuned for smooth, gentle zoom inside an iframe.
+// Controls — rotation/pan handled by OrbitControls, zoom by custom tween below.
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.dampingFactor = 0.14;   // more inertia = smoother feel
+controls.dampingFactor = 0.10;
 controls.target.set(0, 0.5, 0);
 controls.minDistance = 1.5;
 controls.maxDistance = 18;
-controls.zoomSpeed = 0.35;       // small step per wheel tick
-controls.rotateSpeed = 0.85;
+controls.rotateSpeed = 0.9;
 controls.panSpeed = 0.7;
+controls.enableZoom = false;     // ← we run our own smooth zoom
 controls.maxPolarAngle = Math.PI / 2 - 0.04;
 
-// Prevent wheel events on the viewer from scrolling the parent page when the
-// configurator is embedded in an iframe (Shopify etc.). The canvas already
-// handles wheel for zoom; this just stops the event from leaking outside.
+// ---------------- Smooth zoom (exponential lerp to target radius) ----------------
+// Mouse wheel and trackpad emit deltaY in CSS pixels. We accumulate that into a
+// target distance and each frame ease the camera toward it. Feels like the zoom
+// in Sketchfab / Google Earth — smooth at any input speed.
+let zoomTargetRadius = camera.position.distanceTo(controls.target);
+const ZOOM_SENSITIVITY = 0.0012; // tune: bigger = faster
+const ZOOM_LERP        = 0.18;   // tune: bigger = snappier, smaller = silkier
+
+function clampRadius(r) { return Math.max(controls.minDistance, Math.min(controls.maxDistance, r)); }
+
 document.querySelector('.viewer').addEventListener('wheel', e => {
+  // Inside an iframe, we ALWAYS swallow the wheel event so the parent page
+  // doesn't scroll. Then we use it for zoom only if it lands over the canvas.
   e.preventDefault();
   e.stopPropagation();
+  // Accept wheel from canvas OR the viewer (icons, dim-pill, etc.) — uniform UX.
+  const dy = e.deltaY;
+  if (!dy) return;
+  const factor = Math.exp(dy * ZOOM_SENSITIVITY);
+  zoomTargetRadius = clampRadius(zoomTargetRadius * factor);
 }, { passive: false });
+
+function smoothZoomStep() {
+  const currentDir = camera.position.clone().sub(controls.target);
+  const currentR = currentDir.length();
+  if (Math.abs(currentR - zoomTargetRadius) < 0.0008) return;
+  const newR = currentR + (zoomTargetRadius - currentR) * ZOOM_LERP;
+  camera.position.copy(controls.target).add(currentDir.normalize().multiplyScalar(newR));
+}
 
 function resize() {
   const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -1682,6 +1704,7 @@ function updateDimLabels() {
 
 function tick() {
   requestAnimationFrame(tick);
+  smoothZoomStep();         // custom inertial zoom
   controls.update();
   if (dimVisible) updateDimLabels();
   renderer.render(scene, camera);
