@@ -148,7 +148,7 @@
 
   /* Panel */
   .panel {
-    width: 380px;
+    width: 420px;
     background: #F7F6F3;
     display: flex; flex-direction: column;
     overflow: hidden;
@@ -288,7 +288,10 @@
 
   /* Wide monitors — slightly roomier control panel */
   @media (min-width: 1700px) {
-    .panel { width: 440px; }
+    .panel { width: 500px; }
+  }
+  @media (min-width: 2200px) {
+    .panel { width: 560px; }
   }
 
   /* Tablets & phones — stack the 3D view on top, controls below */
@@ -689,8 +692,12 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
 // Default camera position — a touch closer than before, and a bit closer
 // still on narrow viewports (phones) where the 3D area is short.
-if (window.innerWidth < 860) camera.position.set(3.8, 2.3, 4.3);
-else                          camera.position.set(4.6, 2.8, 5.2);
+// Default camera position. Wider viewports need a closer camera otherwise
+// the model looks small relative to the available 3D area.
+if      (window.innerWidth < 860)  camera.position.set(3.8, 2.3, 4.3);
+else if (window.innerWidth < 1700) camera.position.set(4.4, 2.7, 5.0);
+else if (window.innerWidth < 2200) camera.position.set(4.0, 2.5, 4.5);
+else                                camera.position.set(3.6, 2.3, 4.1);
 
 // Lights
 const key = new THREE.DirectionalLight(0xfff2dc, 1.7);
@@ -718,8 +725,9 @@ const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.target.set(0, 0.5, 0);
-controls.minDistance = 2;
-controls.maxDistance = 14;
+controls.minDistance = 1.5;
+controls.maxDistance = 22;
+controls.zoomSpeed = 0.7;
 controls.maxPolarAngle = Math.PI / 2 - 0.04;
 
 function resize() {
