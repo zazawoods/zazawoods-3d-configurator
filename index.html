@@ -410,7 +410,7 @@
       </div>
 
       <!-- Step 4. Sitzbank (U / X) -->
-      <div class="acc locked" data-acc="bench" id="acc-bench">
+      <div class="acc locked hidden" data-acc="bench" id="acc-bench">
         <div class="acc-head">
           <div class="acc-icon"><span class="step-num">4</span></div>
           <div class="acc-title"><b>Sitzbank</b><span id="sub-bench">–</span></div>
@@ -422,7 +422,7 @@
       </div>
 
       <!-- Step 4. Rückenlehne (W) -->
-      <div class="acc locked" data-acc="backrest" id="acc-backrest">
+      <div class="acc locked hidden" data-acc="backrest" id="acc-backrest">
         <div class="acc-head">
           <div class="acc-icon"><span class="step-num">4</span></div>
           <div class="acc-title"><b>Rückenlehne</b><span id="sub-backrest">–</span></div>
@@ -435,7 +435,7 @@
 
     </div>
 
-    <div class="panel-foot">
+    <div class="panel-foot hidden-foot">
       <div class="overzicht">
         <div class="overzicht-h" data-i18n="summary">ÜBERSICHT</div>
         <div class="overzicht-l1" id="ov-l1">Angle Set · Douglasienholz</div>
@@ -1520,6 +1520,14 @@ function buildMaterialChips() {
     state.material = 'douglas';
     chip.classList.add('active');
     updateWizard();
+    // As soon as the wizard starts, kick off the heavy picknick.glb prefetch
+    // so by the time the user reaches step 3 it is already cached. On mobile
+    // cellular this is the difference between an instant Gestell switch and
+    // a ~minute wait.
+    if (!window.__picknickPrefetched) {
+      window.__picknickPrefetched = true;
+      fetch('picknick.glb', { cache: 'force-cache' }).catch(() => {});
+    }
   });
   c.appendChild(chip);
 }
@@ -1608,10 +1616,10 @@ updateWizard();
 loadFallbackWood().then(() => {
   if (state.set) setActiveSet(state.set);
   // Prefetch angle.glb (small, 2.2 MB) right away so W is instant.
-  // Defer picknick.glb (6.25 MB) by a few seconds to keep the initial
-  // page lightweight — visitors who never reach step 3 don't pay for it.
+  // picknick.glb is much bigger (6.3 MB) — its prefetch is triggered as soon
+  // as the user clicks Material (buildMaterialChips), so it runs in parallel
+  // while the user picks length & gestell.
   fetch('angle.glb', { cache: 'force-cache' }).catch(() => {});
-  setTimeout(() => { fetch('picknick.glb', { cache: 'force-cache' }).catch(() => {}); }, 3500);
 });
 
 // ============================ DIMENSIONS OVERLAY ============================
