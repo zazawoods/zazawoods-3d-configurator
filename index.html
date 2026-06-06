@@ -687,10 +687,10 @@ const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 100);
 // still on narrow viewports (phones) where the 3D area is short.
 // Default camera position. Wider viewports need a closer camera otherwise
 // the model looks small relative to the available 3D area.
-if      (window.innerWidth < 860)  camera.position.set(3.8, 2.3, 4.3);
-else if (window.innerWidth < 1700) camera.position.set(4.4, 2.7, 5.0);
-else if (window.innerWidth < 2200) camera.position.set(4.0, 2.5, 4.5);
-else                                camera.position.set(3.6, 2.3, 4.1);
+if      (window.innerWidth < 860)  camera.position.set(3.5, 2.1, 4.0);
+else if (window.innerWidth < 1700) camera.position.set(3.8, 2.3, 4.3);
+else if (window.innerWidth < 2200) camera.position.set(3.4, 2.1, 3.8);
+else                                camera.position.set(3.0, 1.9, 3.5);
 
 // Lights
 const key = new THREE.DirectionalLight(0xfff2dc, 1.7);
