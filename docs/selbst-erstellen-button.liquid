@@ -1,16 +1,15 @@
 {%- comment -%}
   Zaza Woods — Konfigurator-Button auf der Produktseite
   ------------------------------------------------------
-  Diese Snippet stylisiert den "Konfigurator"-Button so, dass er optisch
-  identisch mit dem Site-Cart-Button "In den Warenkorb legen" wirkt.
-  Gemessene Werte vom echten Cart-Button auf zazawoods.de:
-    background  rgb(87,116,118)  = #577476
-    color       white
-    radius      5px
-    padding     0 30px (vertikal über min-height/line-height)
-    font        15px / 400 / Switzer
+  Optisch identisch zum echten Cart-Button "In den Warenkorb legen" auf
+  zazawoods.de. Höhe und Maße direkt vom Live-Cart-Button gemessen:
+    background    rgb(87,116,118)  = #577476
+    color         white
+    radius        5px
+    height        47 px
+    font          15px / 400 / Switzer
     text-transform: none
-    border / box-shadow: keiner
+    margins       16 px oben/unten (Atemraum wie um "Jetzt bestellen")
 
   Bedienung: Theme-Editor → Snippets → selbst-erstellen-button.liquid →
   ALLES ersetzen → Save.
@@ -40,9 +39,12 @@
     justify-content: center;
     gap: 10px;
     width: 100%;
-    min-height: 52px;
+    /* Höhe 47 px – exakt wie "In den Warenkorb legen" */
+    height: 47px;
+    min-height: 47px;
     padding: 0 30px;
-    background: #577476;            /* identisch zur Cart-Farbe */
+    margin: 16px 0;                  /* Atemraum oben & unten, wie um "Jetzt bestellen" */
+    background: #577476;             /* identisch zur Cart-Farbe */
     color: #fff;
     font-family: 'Switzer', -apple-system, "Segoe UI", Arial, sans-serif;
     font-size: 15px;
@@ -60,11 +62,11 @@
   }
   .zw-konfig-btn:hover  { background: #486264; }   /* dezent dunkler */
   .zw-konfig-btn:active { transform: scale(.99); }
+  .zw-konfig-btn:focus-visible { outline: 2px solid #577476; outline-offset: 2px; }
   .zw-konfig-btn__ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
   .zw-konfig-btn__ic svg { width: 100%; height: 100%; }
   .zw-konfig-btn__t { white-space: nowrap; }
-  /* Mobil: gleiche Größe wie der Cart-Button auf Mobil */
   @media (max-width: 749px) {
-    .zw-konfig-btn { min-height: 48px; font-size: 14.5px; }
+    .zw-konfig-btn { height: 44px; min-height: 44px; font-size: 14.5px; margin: 12px 0; }
   }
 </style>
