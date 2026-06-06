@@ -1,19 +1,43 @@
 {%- comment -%}
   Zaza Woods — Konfigurator-Button auf der Produktseite
   ------------------------------------------------------
-  Optisch identisch zum echten Cart-Button "In den Warenkorb legen" auf
-  zazawoods.de. Höhe und Maße direkt vom Live-Cart-Button gemessen:
-    background    rgb(87,116,118)  = #577476
-    color         white
-    radius        5px
-    height        47 px
-    font          15px / 400 / Switzer
-    text-transform: none
-    margins       16 px oben/unten (Atemraum wie um "Jetzt bestellen")
+  Zeigt einen "Konfigurator öffnen"-Button im Stil von "In den Warenkorb legen".
+
+  WICHTIG — Template-Guard:
+  Damit der Button NICHT auf jeder Produktseite erscheint, prüfen wir, ob
+  das aktuelle Template das Suffix "konfigurator" hat (z. B. product.konfigurator
+  oder page.konfigurator). Nur dann wird der Button gerendert.
+
+  Wenn du also nur möchtest, dass dieser Button auf dem Picknicktisch erscheint:
+   1. Im Theme-Editor das Produkt öffnen
+   2. Oben rechts → Template ändern → "konfigurator" wählen
+      (sobald ein Template product.konfigurator existiert).
+   3. Andere Produkte behalten "default" → der Button bleibt dort unsichtbar.
 
   Bedienung: Theme-Editor → Snippets → selbst-erstellen-button.liquid →
   ALLES ersetzen → Save.
+
+  Optisch identisch zum echten Cart-Button:
+    background    rgb(87,116,118)  = #577476
+    color         white
+    radius        5px
+    height        47 px (= "In den Warenkorb legen")
+    font          15px / 400 / Switzer
+    margins       16 px oben/unten (Atemraum wie um "Jetzt bestellen")
 {%- endcomment -%}
+
+{%- liquid
+  assign suffix = template.suffix | downcase
+  assign tname  = template.name   | downcase
+  assign show   = false
+  if suffix == 'konfigurator'
+    assign show = true
+  elsif tname == 'konfigurator'
+    assign show = true
+  endif
+-%}
+
+{%- if show -%}
 
 {%- assign target_url = '/pages/konfigurator' -%}
 {%- if section.settings.preselect_set -%}
@@ -39,12 +63,11 @@
     justify-content: center;
     gap: 10px;
     width: 100%;
-    /* Höhe 47 px – exakt wie "In den Warenkorb legen" */
     height: 47px;
     min-height: 47px;
     padding: 0 30px;
-    margin: 16px 0;                  /* Atemraum oben & unten, wie um "Jetzt bestellen" */
-    background: #577476;             /* identisch zur Cart-Farbe */
+    margin: 16px 0;
+    background: #577476;
     color: #fff;
     font-family: 'Switzer', -apple-system, "Segoe UI", Arial, sans-serif;
     font-size: 15px;
@@ -60,7 +83,7 @@
     transition: background .15s, transform .08s;
     box-sizing: border-box;
   }
-  .zw-konfig-btn:hover  { background: #486264; }   /* dezent dunkler */
+  .zw-konfig-btn:hover  { background: #486264; }
   .zw-konfig-btn:active { transform: scale(.99); }
   .zw-konfig-btn:focus-visible { outline: 2px solid #577476; outline-offset: 2px; }
   .zw-konfig-btn__ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
@@ -70,3 +93,5 @@
     .zw-konfig-btn { height: 44px; min-height: 44px; font-size: 14.5px; margin: 12px 0; }
   }
 </style>
+
+{%- endif -%}
