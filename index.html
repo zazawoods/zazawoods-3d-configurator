@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Zaza Woods – 3D Configurator</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -156,7 +156,11 @@
   .panel-scroll { flex: 1; overflow-y: auto; padding: 20px 26px 10px; }
   .panel-scroll::-webkit-scrollbar { width: 6px; }
   .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  .panel-foot { padding: 14px 20px 18px; border-top: 1px solid var(--border); }
+  .panel-foot {
+    padding: 14px 20px 18px;
+    padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border);
+  }
 
   /* Accordion section — flat, divided by thin rules (bogade style) */
   .acc { background: transparent; border: none; border-radius: 0; margin: 0;
@@ -308,7 +312,7 @@
   @media (max-width: 560px) {
     .viewer { height: 44vh; height: 44dvh; min-height: 240px; }
     .panel-scroll { padding: 12px 14px 6px; }
-    .panel-foot { padding: 12px 14px 14px; }
+    .panel-foot { padding: 12px 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
     .acc { margin-bottom: 8px; }
     .acc-head { padding: 11px 12px; gap: 10px; }
     .acc-icon { width: 38px; height: 38px; }
@@ -340,7 +344,7 @@
   <!-- Viewer -->
   <div class="viewer">
     <canvas id="canvas"></canvas>
-    <div class="viewer-empty" id="viewer-empty">
+    <div class="viewer-empty" id="viewer-empty" style="display:none">
       <b>Konfigurator</b>
       <span>Wähle Material, Abmessung und Gestell, um dein 3D-Modell zu sehen.</span>
     </div>
@@ -372,22 +376,10 @@
   <aside class="panel">
     <div class="panel-scroll">
 
-      <!-- Step 1. Material -->
-      <div class="acc open" data-acc="finish" id="acc-material">
+      <!-- 1. Abmessung -->
+      <div class="acc open" data-acc="length" id="acc-length">
         <div class="acc-head">
           <div class="acc-icon"><span class="step-num">1</span></div>
-          <div class="acc-title"><b>Material</b><span id="sub-mat">–</span></div>
-          <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div class="acc-body">
-          <div class="chips" id="material-chips"></div>
-        </div>
-      </div>
-
-      <!-- Step 2. Abmessung -->
-      <div class="acc locked" data-acc="length" id="acc-length">
-        <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">2</span></div>
           <div class="acc-title"><b>Abmessung</b><span id="sub-length">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -397,10 +389,10 @@
         </div>
       </div>
 
-      <!-- Step 3. Gestell -->
-      <div class="acc locked" data-acc="model" id="acc-set">
+      <!-- 2. Gestell -->
+      <div class="acc open" data-acc="model" id="acc-set">
         <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">3</span></div>
+          <div class="acc-icon"><span class="step-num">2</span></div>
           <div class="acc-title"><b>Gestell</b><span id="sub-set">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -409,10 +401,10 @@
         </div>
       </div>
 
-      <!-- Step 4. Sitzbank (U / X) -->
-      <div class="acc locked hidden" data-acc="bench" id="acc-bench">
+      <!-- 3. Sitzbank (U / X only) -->
+      <div class="acc open hidden" data-acc="bench" id="acc-bench">
         <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">4</span></div>
+          <div class="acc-icon"><span class="step-num">3</span></div>
           <div class="acc-title"><b>Sitzbank</b><span id="sub-bench">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -421,10 +413,10 @@
         </div>
       </div>
 
-      <!-- Step 4. Rückenlehne (W) -->
-      <div class="acc locked hidden" data-acc="backrest" id="acc-backrest">
+      <!-- 3. Rückenlehne (W only) -->
+      <div class="acc open" data-acc="backrest" id="acc-backrest">
         <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">4</span></div>
+          <div class="acc-icon"><span class="step-num">3</span></div>
           <div class="acc-title"><b>Rückenlehne</b><span id="sub-backrest">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -435,7 +427,7 @@
 
     </div>
 
-    <div class="panel-foot hidden-foot">
+    <div class="panel-foot">
       <div class="overzicht">
         <div class="overzicht-h" data-i18n="summary">ÜBERSICHT</div>
         <div class="overzicht-l1" id="ov-l1">Angle Set · Douglasienholz</div>
@@ -650,10 +642,11 @@ function getVariant() {
 
 
 // ============================ STATE ============================
+// Defaults: W (Picknicktisch) at 200 cm, no backrests. Customer can change.
 const state = {
-  material: null,     // 'douglas' once chosen
-  set: null,          // 'angle' / 'picknick_Ushape' / 'picknick_Xshape'
-  length: null,
+  material: 'douglas',
+  set: 'angle',
+  length: 200,
   benches: 2,         // 0 / 1 / 2 — only used by the Picknick (U/X) models
   backrests: 0        // 0 / 1 / 2 — only used by the W (Picknicktisch) model
 };
@@ -1483,117 +1476,37 @@ function updateUI() {
   history.replaceState(null, '', '?' + params.toString());
 }
 
-// Restore from URL (full config = skip the wizard)
-let URL_HAS_CONFIG = false;
+// Restore from URL — every parameter is optional and just overrides the
+// W / 200 cm / no-backrest defaults above.
 (function restore() {
   const qp = new URLSearchParams(location.search);
   if (qp.has('set') && SET_ORDER.includes(qp.get('set'))) state.set = qp.get('set');
-  if (state.set) {
-    state.material = 'douglas';
-    const cfg = SETS[state.set];
-    if (qp.has('length')) {
-      const L = parseInt(qp.get('length'), 10);
-      state.length = cfg.lengths.includes(L) ? L : cfg.lengths[Math.floor(cfg.lengths.length / 2)];
-    } else {
-      state.length = cfg.lengths[Math.floor(cfg.lengths.length / 2)];
-    }
-    if (qp.has('benches')) {
-      const b = parseInt(qp.get('benches'), 10);
-      if (b === 0 || b === 1 || b === 2) state.benches = b;
-    }
-    if (qp.has('backrests')) {
-      const r = parseInt(qp.get('backrests'), 10);
-      if (r === 0 || r === 1 || r === 2) state.backrests = r;
-    }
-    URL_HAS_CONFIG = true;
+  const cfg = SETS[state.set];
+  if (qp.has('length')) {
+    const L = parseInt(qp.get('length'), 10);
+    if (cfg.lengths.includes(L)) state.length = L;
+  }
+  if (qp.has('benches')) {
+    const b = parseInt(qp.get('benches'), 10);
+    if (b === 0 || b === 1 || b === 2) state.benches = b;
+  }
+  if (qp.has('backrests')) {
+    const r = parseInt(qp.get('backrests'), 10);
+    if (r === 0 || r === 1 || r === 2) state.backrests = r;
   }
 })();
 
-// ============================ Wizard ============================
-function buildMaterialChips() {
-  const c = document.getElementById('material-chips'); if (!c) return;
-  c.innerHTML = '';
-  const chip = document.createElement('div');
-  chip.className = 'chip' + (state.material ? ' active' : '');
-  chip.textContent = 'Douglasienholz';
-  chip.addEventListener('click', () => {
-    state.material = 'douglas';
-    chip.classList.add('active');
-    updateWizard();
-    // As soon as the wizard starts, kick off the heavy picknick.glb prefetch
-    // so by the time the user reaches step 3 it is already cached. On mobile
-    // cellular this is the difference between an instant Gestell switch and
-    // a ~minute wait.
-    if (!window.__picknickPrefetched) {
-      window.__picknickPrefetched = true;
-      fetch('picknick.glb', { cache: 'force-cache' }).catch(() => {});
-    }
-  });
-  c.appendChild(chip);
-}
-
-function updateWizard() {
-  const accs = {
-    mat:  document.getElementById('acc-material'),
-    len:  document.getElementById('acc-length'),
-    set:  document.getElementById('acc-set'),
-    bench:document.getElementById('acc-bench'),
-    back: document.getElementById('acc-backrest')
-  };
-  const foot = document.querySelector('.panel-foot');
-  const empty = document.getElementById('viewer-empty');
-
-  const matDone = !!state.material;
-  const lenDone = state.length != null;
-  const setDone = state.set != null;
-  const modelReady = matDone && lenDone && setDone;
-
-  // Locks & open state
-  accs.mat .classList.remove('locked'); accs.mat .classList.toggle('done', matDone);
-  accs.len .classList.toggle('locked', !matDone); accs.len .classList.toggle('done', lenDone);
-  accs.set .classList.toggle('locked', !(matDone && lenDone)); accs.set .classList.toggle('done', setDone);
-  // Step 4 only unlocks once the model is visible
-  accs.bench.classList.toggle('locked', !modelReady);
-  accs.back .classList.toggle('locked', !modelReady);
-
-  // Auto-open the active step (and only the active step)
-  const order = [['mat', matDone], ['len', lenDone], ['set', setDone]];
-  let opened = false;
-  order.forEach(([k, done]) => {
-    const el = accs[k];
-    if (!done && !opened) { el.classList.add('open'); opened = true; }
-    else el.classList.remove('open');
-  });
-  if (modelReady) {
-    // Show whichever step-4 section applies and keep it open
-    if (SETS[state.set] && SETS[state.set].fixedLeg) { accs.bench.classList.add('open'); accs.back.classList.remove('open'); }
-    else                                              { accs.back.classList.add('open');  accs.bench.classList.remove('open'); }
-  }
-
-  // Sub-labels
-  document.getElementById('sub-mat').textContent = matDone ? 'Douglasienholz' : '–';
-  // Sub-Gestell: name if picked, else dash
-  document.getElementById('sub-set').textContent = setDone ? SETS[state.set].name : '–';
-  // Sub-Abmessung: show length right away even if Gestell isn't picked yet
-  if (lenDone && !setDone)      document.getElementById('sub-length').textContent = state.length + ' cm';
-  else if (!lenDone)            document.getElementById('sub-length').textContent = '–';
-  if (!modelReady) document.getElementById('sub-bench').textContent = '–';
-  if (!modelReady) document.getElementById('sub-backrest').textContent = '–';
-
-  // Viewer placeholder + footer
-  if (empty) empty.style.display = modelReady ? 'none' : 'flex';
-  if (foot)  foot.classList.toggle('hidden-foot', !modelReady);
-}
+// Material was removed from the UI — kept as a no-op stub so older code paths
+// that called it (chip handlers etc.) don't crash.
+function updateWizard() {}
 
 // ============================ Boot ============================
-buildMaterialChips();
 buildSetGrid();
 buildLengthChips();
 buildBenchChips();
 buildBackrestChips();
 updateBenchSection();
 updateUI();
-updateWizard();
 
 // On mobile the summary card scrolls with the content (not pinned);
 // on desktop it stays in the pinned footer above the price + CTA.
