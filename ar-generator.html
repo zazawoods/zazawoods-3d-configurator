@@ -176,6 +176,16 @@ function buildConfig(src, cfg) {
   // Stretch length along Z
   grp.scale.set(1, 1, scaleZ);
   grp.updateMatrixWorld(true);
+
+  // CRITICAL for AR: anchor the model so its bottom is exactly at Y=0 and its
+  // X/Z centre at the origin. Without this Scene Viewer (Samsung Internet,
+  // Chrome) and iOS Quick Look place the model floating above the floor.
+  const box = new THREE.Box3().setFromObject(grp);
+  if (!box.isEmpty()) {
+    const c = box.getCenter(new THREE.Vector3());
+    grp.position.set(-c.x, -box.min.y, -c.z);
+    grp.updateMatrixWorld(true);
+  }
   return grp;
 }
 

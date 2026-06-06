@@ -36,12 +36,29 @@
   var u = safeUrl(q.get('u')), g = safeUrl(q.get('g'));
   var ua = navigator.userAgent;
   var isIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  var isAndroid = /Android/.test(ua);
+  // Only Chrome on Android supports intent:// URLs.
+  // Samsung Internet, Firefox, Edge, Opera → must use direct https Scene Viewer URL.
+  var isChromeAndroid = isAndroid && /Chrome/.test(ua) && !/SamsungBrowser|EdgA|FxiOS|OPR|Edge\//.test(ua);
+
+  function sceneViewerUrl(glb) {
+    var enc = encodeURIComponent(glb);
+    var httpsFallback =
+      'https://arvr.google.com/scene-viewer/1.0?file=' + enc +
+      '&mode=ar_preferred&resizable=false&title=Zaza%20Woods';
+    if (isChromeAndroid) {
+      return 'intent://arvr.google.com/scene-viewer/1.0?file=' + enc +
+        '&mode=ar_preferred&resizable=false&title=Zaza%20Woods' +
+        '#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;' +
+        'S.browser_fallback_url=' + encodeURIComponent(httpsFallback) + ';end;';
+    }
+    return httpsFallback;
+  }
+
   var target = null;
-  if (isIOS && u) target = u;                                  // iOS → USDZ → AR Quick Look
-  else if (g) target = 'intent://arvr.google.com/scene-viewer/1.0?file=' + encodeURIComponent(g)
-      + '&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url='
-      + encodeURIComponent(location.origin) + ';end;';        // Android → Scene Viewer
-  else if (u) target = u;
+  if (isIOS && u)         target = u;                  // iPhone/iPad → USDZ → AR Quick Look
+  else if (g)             target = sceneViewerUrl(g);  // any Android browser → Scene Viewer
+  else if (u)             target = u;
 
   if (target) {
     var a = document.getElementById('arl');

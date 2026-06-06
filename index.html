@@ -1301,6 +1301,10 @@ const arModal = document.getElementById('ar-modal');
 const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent)
   || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); // iPadOS
 const isAndroid = /Android/.test(navigator.userAgent);
+// Chrome on Android is the only browser that supports intent:// URLs reliably.
+// Samsung Internet, Firefox, Edge etc. need a direct https URL to Scene Viewer.
+const isChromeAndroid = isAndroid && /Chrome/.test(navigator.userAgent)
+  && !/SamsungBrowser|EdgA|FxiOS|OPR|Edge\//.test(navigator.userAgent);
 const isMobileDevice = isIOS || isAndroid;
 
 function loadScriptOnce(flag, attrs) {
@@ -1327,6 +1331,17 @@ function buildExportScene() {
     m.applyMatrix4(o.matrixWorld);
     grp.add(m);
   });
+  // CRITICAL for AR on every device: anchor the model so its bottom is exactly
+  // at Y=0 and its X/Z centre at the origin. Without this, Scene Viewer
+  // (Samsung Internet, Chrome) and Quick Look place the model floating above
+  // the floor — which is exactly the bug seen on Samsung.
+  grp.updateMatrixWorld(true);
+  const box = new THREE.Box3().setFromObject(grp);
+  if (!box.isEmpty()) {
+    const c = box.getCenter(new THREE.Vector3());
+    grp.position.set(-c.x, -box.min.y, -c.z);
+    grp.updateMatrixWorld(true);
+  }
   return grp;
 }
 
@@ -1371,10 +1386,37 @@ async function prepareAR(both) {
   return arCache[key] || null;
 }
 
+// Build the right Scene Viewer URL for the current Android browser.
+//   • Chrome  → intent:// (best UX, calls ARCore directly)
+//   • Samsung Internet, Firefox, Edge, Opera → direct https URL to Scene Viewer
+//     (those browsers ignore intent:// and would just sit on a blank page)
+// `resizable=false` makes Scene Viewer keep the real-world size — no auto-scale
+// (which is partly why the table looked "floating" / wrongly-sized before).
 function sceneViewerUrl(glbUrl) {
-  return 'intent://arvr.google.com/scene-viewer/1.0?file=' + encodeURIComponent(glbUrl)
-    + '&mode=ar_preferred#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;S.browser_fallback_url='
-    + encodeURIComponent(location.origin) + ';end;';
+  const enc = encodeURIComponent(glbUrl);
+  const httpsFallback =
+    'https://arvr.google.com/scene-viewer/1.0?file=' + enc +
+    '&mode=ar_preferred&resizable=false&title=Zaza%20Woods';
+  if (isChromeAndroid) {
+    return 'intent://arvr.google.com/scene-viewer/1.0?file=' + enc +
+      '&mode=ar_preferred&resizable=false&title=Zaza%20Woods' +
+      '#Intent;scheme=https;package=com.google.ar.core;action=android.intent.action.VIEW;' +
+      'S.browser_fallback_url=' + encodeURIComponent(httpsFallback) + ';end;';
+  }
+  // Samsung Internet, Firefox, Edge, etc.
+  return httpsFallback;
+}
+
+// Open an URL with a programmatic anchor click. More reliable than
+// `location.href = …` on Samsung Internet, where direct navigation sometimes
+// shows a blank page instead of launching Scene Viewer.
+function openAndroidAR(glbUrl) {
+  const a = document.createElement('a');
+  a.href = sceneViewerUrl(glbUrl);
+  a.style.display = 'none';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { try { document.body.removeChild(a); } catch (e) {} }, 1000);
 }
 
 // Phone: one tap → native AR (no model-viewer, no second tap).
@@ -1402,8 +1444,8 @@ async function launchMobileAR() {
   const ready = isIOS ? (c && c.usdz) : (c && c.glb);
   if (!ready) { showToast('AR …'); c = await prepareAR(false); }
   if (!c) { showToast('AR nicht verfügbar'); return; }
-  if (isIOS && c.usdz)      openIosAR(c.usdz);                 // → AR Quick Look (proper rel="ar" anchor)
-  else if (c.glb)           location.href = sceneViewerUrl(c.glb);  // → Scene Viewer
+  if (isIOS && c.usdz)      openIosAR(c.usdz);          // iPhone/iPad → AR Quick Look
+  else if (c.glb)           openAndroidAR(c.glb);       // any Android browser → Scene Viewer
   else                      showToast('AR auf diesem Gerät nicht verfügbar');
 }
 
