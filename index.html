@@ -1378,13 +1378,33 @@ function sceneViewerUrl(glbUrl) {
 }
 
 // Phone: one tap → native AR (no model-viewer, no second tap).
+// IMPORTANT: on iOS Safari, `location.href = usdz` shows the raw file bytes
+// instead of triggering AR Quick Look. The reliable way is a programmatically
+// clicked <a rel="ar"><img></a> — Quick Look explicitly looks for this pattern.
+function openIosAR(usdzUrl) {
+  const a = document.createElement('a');
+  a.setAttribute('rel', 'ar');
+  a.href = usdzUrl;
+  // Quick Look REQUIRES an <img> inside the anchor; without it iOS just
+  // navigates to the file (= page of binary code that the user reported).
+  const img = document.createElement('img');
+  img.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+  img.alt = '';
+  img.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none';
+  a.appendChild(img);
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => document.body.removeChild(a), 1000);
+}
+
 async function launchMobileAR() {
   let c = arCache[arKey()];
   const ready = isIOS ? (c && c.usdz) : (c && c.glb);
   if (!ready) { showToast('AR …'); c = await prepareAR(false); }
   if (!c) { showToast('AR nicht verfügbar'); return; }
-  if (isIOS && c.usdz) location.href = c.usdz;             // → AR Quick Look
-  else if (c.glb) location.href = sceneViewerUrl(c.glb);   // → Scene Viewer
+  if (isIOS && c.usdz)      openIosAR(c.usdz);                 // → AR Quick Look (proper rel="ar" anchor)
+  else if (c.glb)           location.href = sceneViewerUrl(c.glb);  // → Scene Viewer
+  else                      showToast('AR auf diesem Gerät nicht verfügbar');
 }
 
 // Desktop: upload both formats, QR points at /ar.html which auto-opens AR on the phone.

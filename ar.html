@@ -45,11 +45,17 @@
 
   if (target) {
     var a = document.getElementById('arl');
-    if (isIOS) { a.setAttribute('rel', 'ar'); a.innerHTML = '<img alt="" style="display:none">In AR öffnen'; }
+    // For AR Quick Look on iOS Safari, the anchor MUST have rel="ar" AND an
+    // <img> child — otherwise Safari just shows the raw .usdz bytes.
+    if (isIOS) {
+      a.setAttribute('rel', 'ar');
+      // tiny invisible 1×1 GIF — required by Quick Look
+      a.innerHTML = '<img src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" alt="" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none">In AR öffnen';
+    }
     a.href = target;
     a.style.display = 'inline-block';
-    // auto-open
-    setTimeout(function () { try { location.href = target; } catch (e) {} }, 250);
+    // auto-click the anchor (NOT location.href — that bypasses rel="ar")
+    setTimeout(function () { try { a.click(); } catch (e) {} }, 250);
     document.getElementById('sub').textContent = 'Falls sich nichts öffnet, tippe auf den Button.';
   } else {
     document.getElementById('msg').textContent = 'Kein Modell angegeben.';
