@@ -1,18 +1,17 @@
 {%- comment -%}
   Zaza Woods 3D Configurator — Shopify section (fullscreen iframe)
   ----------------------------------------------------------------
-  Bricht aus dem Theme-Container (Codixel-Wrapper) aus und füllt die
-  komplette Viewport-Breite. Standardmäßig: kein Titel, kein Rand,
-  voller Bildschirm.
+  Standardmäßig: füllt die Viewport-Breite und die VERFÜGBARE Höhe unter der
+  Shopify-Navigation aus, sodass der "In den Warenkorb"-Button OHNE Scrollen
+  sichtbar ist. Kein Titel, keine seitlichen Ränder.
 
   Kopiere den Inhalt in den Theme-Editor →
   Sections → konfigurator-embed.liquid → ALLES ersetzen → Save.
 {%- endcomment -%}
 
 <style>
-  /* Aus dem Theme-Container ausbrechen: 100vw breit, egal in welchem Wrapper.
-     Negative Margin = (50% des Wrappers) − 50vw, das verschiebt den linken
-     Rand der Section so weit nach links, dass er am Viewport-Rand sitzt. */
+  /* Aus dem Theme-Container ausbrechen (Codixel-Wrapper) und volle Viewport-
+     breite einnehmen. Negative Margin = (50% des Wrappers) − 50vw. */
   .zw-config-section {
     position: relative;
     width: 100vw;
@@ -30,11 +29,13 @@
     {% if section.settings.max_width > 0 %}max-width: {{ section.settings.max_width }}px; margin: 0 auto;{% endif %}
     {% if section.settings.h_padding > 0 %}padding: 0 {{ section.settings.h_padding }}px; box-sizing: border-box;{% endif %}
   }
+  /* WICHTIG: Höhe = Viewport MINUS Shopify-Navi-Höhe. Damit ist der
+     "In den Warenkorb"-Button immer sichtbar, ohne dass der Kunde scrollen muss. */
   .zw-config-frame {
     display: block;
     width: 100%;
-    height: {{ section.settings.desktop_height }}vh;
-    height: {{ section.settings.desktop_height }}dvh;
+    height: calc(100vh - {{ section.settings.nav_offset }}px);
+    height: calc(100dvh - {{ section.settings.nav_offset }}px);
     min-height: 600px;
     border: 0;
     background: #F7F6F3;
@@ -42,8 +43,8 @@
   }
   @media (max-width: 860px) {
     .zw-config-frame {
-      height: {{ section.settings.mobile_height }}vh;
-      height: {{ section.settings.mobile_height }}dvh;
+      height: calc(100vh - {{ section.settings.nav_offset_mobile }}px);
+      height: calc(100dvh - {{ section.settings.nav_offset_mobile }}px);
       min-height: 520px;
     }
   }
@@ -90,8 +91,9 @@
 
     { "type": "header", "content": "Größe & Abstände" },
     { "type": "range", "id": "max_width",         "label": "Max. Breite (px, 0 = volle Breite)", "min": 0,   "max": 1800, "step": 20, "default": 0 },
-    { "type": "range", "id": "desktop_height",    "label": "Höhe Desktop (vh)",                  "min": 60,  "max": 100,  "step": 1,  "default": 95 },
-    { "type": "range", "id": "mobile_height",     "label": "Höhe Mobil (vh)",                    "min": 70,  "max": 100,  "step": 1,  "default": 92 },
+    { "type": "range", "id": "nav_offset",        "label": "Höhe Shopify-Navi Desktop (px)",    "min": 0,   "max": 250,  "step": 5,  "default": 150,
+                       "info": "Damit der iframe nicht hinter der Navigation versteckt ist. Erhöhe diesen Wert, wenn dein Header höher ist." },
+    { "type": "range", "id": "nav_offset_mobile", "label": "Höhe Shopify-Navi Mobil (px)",      "min": 0,   "max": 200,  "step": 5,  "default": 90 },
     { "type": "range", "id": "padding_top",       "label": "Abstand oben (px)",                  "min": 0,   "max": 120,  "step": 4,  "default": 0 },
     { "type": "range", "id": "padding_bottom",    "label": "Abstand unten (px)",                 "min": 0,   "max": 120,  "step": 4,  "default": 0 },
     { "type": "range", "id": "h_padding",         "label": "Seitenabstand (px)",                 "min": 0,   "max": 60,   "step": 2,  "default": 0 },
@@ -100,13 +102,13 @@
 
     { "type": "header", "content": "Optional: Vorauswahl beim Öffnen" },
     { "type": "select", "id": "preselect_set", "label": "Gestell vorwählen", "options": [
-        { "value": "",                  "label": "— Wizard zeigen —" },
+        { "value": "",                  "label": "— Standard (W) —" },
         { "value": "angle",             "label": "W (Picknicktisch)" },
         { "value": "picknick_Ushape",   "label": "U (Gartentisch U-Form)" },
         { "value": "picknick_Xshape",   "label": "X (Gartentisch X-Form)" }
       ], "default": "" },
     { "type": "select", "id": "preselect_length", "label": "Länge vorwählen", "options": [
-        { "value": "",    "label": "— keine Vorauswahl —" },
+        { "value": "",    "label": "— Standard (200 cm) —" },
         { "value": "160", "label": "160 cm" },
         { "value": "180", "label": "180 cm" },
         { "value": "200", "label": "200 cm" },
