@@ -1,0 +1,70 @@
+{%- comment -%}
+  Zaza Woods — Konfigurator-Button auf der Produktseite
+  ------------------------------------------------------
+  Diese Snippet stylisiert den "Konfigurator"-Button so, dass er optisch
+  identisch mit dem Site-Cart-Button "In den Warenkorb legen" wirkt.
+  Gemessene Werte vom echten Cart-Button auf zazawoods.de:
+    background  rgb(87,116,118)  = #577476
+    color       white
+    radius      5px
+    padding     0 30px (vertikal über min-height/line-height)
+    font        15px / 400 / Switzer
+    text-transform: none
+    border / box-shadow: keiner
+
+  Bedienung: Theme-Editor → Snippets → selbst-erstellen-button.liquid →
+  ALLES ersetzen → Save.
+{%- endcomment -%}
+
+{%- assign target_url = '/pages/konfigurator' -%}
+{%- if section.settings.preselect_set -%}
+  {%- assign target_url = target_url | append: '?set=' | append: section.settings.preselect_set -%}
+{%- endif -%}
+
+<a href="{{ target_url }}" class="zw-konfig-btn" aria-label="Konfigurator öffnen">
+  <span class="zw-konfig-btn__ic" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg>
+  </span>
+  <span class="zw-konfig-btn__t">Konfigurator öffnen</span>
+</a>
+
+<style>
+  .zw-konfig-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    padding: 0 30px;
+    background: #577476;            /* identisch zur Cart-Farbe */
+    color: #fff;
+    font-family: 'Switzer', -apple-system, "Segoe UI", Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
+    text-decoration: none;
+    border: 0;
+    border-radius: 5px;
+    box-shadow: none;
+    cursor: pointer;
+    transition: background .15s, transform .08s;
+    box-sizing: border-box;
+  }
+  .zw-konfig-btn:hover  { background: #486264; }   /* dezent dunkler */
+  .zw-konfig-btn:active { transform: scale(.99); }
+  .zw-konfig-btn__ic { display: inline-flex; width: 18px; height: 18px; flex: none; }
+  .zw-konfig-btn__ic svg { width: 100%; height: 100%; }
+  .zw-konfig-btn__t { white-space: nowrap; }
+  /* Mobil: gleiche Größe wie der Cart-Button auf Mobil */
+  @media (max-width: 749px) {
+    .zw-konfig-btn { min-height: 48px; font-size: 14.5px; }
+  }
+</style>
