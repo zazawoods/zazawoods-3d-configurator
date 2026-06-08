@@ -1443,14 +1443,22 @@ function openIosAR(usdzUrl) {
   setTimeout(() => document.body.removeChild(a), 1000);
 }
 
+// Single-flight: a second tap while we're still preparing the model must NOT
+// kick off a parallel launch — otherwise it raced with the first one and
+// erroneously surfaced "AR nicht verfügbar" right before AR actually opened.
+let arLaunchInFlight = null;
 async function launchMobileAR() {
-  let c = arCache[arKey()];
-  const ready = isIOS ? (c && c.usdz) : (c && c.glb);
-  if (!ready) { showToast('AR …'); c = await prepareAR(false); }
-  if (!c) { showToast('AR nicht verfügbar'); return; }
-  if (isIOS && c.usdz)      openIosAR(c.usdz);          // iPhone/iPad → AR Quick Look
-  else if (c.glb)           openAndroidAR(c.glb);       // any Android browser → Scene Viewer
-  else                      showToast('AR auf diesem Gerät nicht verfügbar');
+  if (arLaunchInFlight) return arLaunchInFlight;        // ignore double-taps
+  arLaunchInFlight = (async () => {
+    let c = arCache[arKey()];
+    const ready = isIOS ? (c && c.usdz) : (c && c.glb);
+    if (!ready) { showToast('AR …'); c = await prepareAR(false); }
+    if (!c) { showToast('AR nicht verfügbar'); return; }
+    if (isIOS && c.usdz)      openIosAR(c.usdz);        // iPhone/iPad → AR Quick Look
+    else if (c.glb)           openAndroidAR(c.glb);     // any Android browser → Scene Viewer
+    else                      showToast('AR auf diesem Gerät nicht verfügbar');
+  })();
+  try { await arLaunchInFlight; } finally { arLaunchInFlight = null; }
 }
 
 // Desktop: upload both formats, QR points at /ar.html which auto-opens AR on the phone.
