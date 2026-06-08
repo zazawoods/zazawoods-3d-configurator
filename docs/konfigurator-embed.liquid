@@ -5,13 +5,18 @@
   Shopify-Navigation aus, sodass der "In den Warenkorb"-Button OHNE Scrollen
   sichtbar ist. Kein Titel, keine seitlichen Ränder.
 
+  WICHTIG — Variant-Passthrough:
+  Wenn die Konfigurator-Seite mit Query-Parametern aufgerufen wird (z. B.
+  /pages/konfigurator?set=picknick_Xshape&length=280&benches=2 vom
+  Konfigurator-Button auf der Produktseite), übernimmt das Inline-Script
+  unten DIESE Parameter und hängt sie an die iframe-URL an. Ohne diesen
+  Passthrough würde der Konfigurator immer mit Default (200 cm, W) öffnen.
+
   Kopiere den Inhalt in den Theme-Editor →
   Sections → konfigurator-embed.liquid → ALLES ersetzen → Save.
 {%- endcomment -%}
 
 <style>
-  /* Aus dem Theme-Container ausbrechen (Codixel-Wrapper) und volle Viewport-
-     breite einnehmen. Negative Margin = (50% des Wrappers) − 50vw. */
   .zw-config-section {
     position: relative;
     width: 100vw;
@@ -29,8 +34,6 @@
     {% if section.settings.max_width > 0 %}max-width: {{ section.settings.max_width }}px; margin: 0 auto;{% endif %}
     {% if section.settings.h_padding > 0 %}padding: 0 {{ section.settings.h_padding }}px; box-sizing: border-box;{% endif %}
   }
-  /* WICHTIG: Höhe = Viewport MINUS Shopify-Navi-Höhe. Damit ist der
-     "In den Warenkorb"-Button immer sichtbar, ohne dass der Kunde scrollen muss. */
   .zw-config-frame {
     display: block;
     width: 100%;
@@ -54,6 +57,15 @@
     text-align: {{ section.settings.title_align }}; }
 </style>
 
+{%- assign cfg_base = 'https://zazawoods-3d-configurator-production.up.railway.app/' -%}
+{%- assign cfg_qs = '' -%}
+{%- if section.settings.preselect_set != blank -%}
+  {%- assign cfg_qs = '?set=' | append: section.settings.preselect_set -%}
+  {%- if section.settings.preselect_length != blank -%}
+    {%- assign cfg_qs = cfg_qs | append: '&length=' | append: section.settings.preselect_length -%}
+  {%- endif -%}
+{%- endif -%}
+
 <div class="zw-config-section">
   <div class="zw-config-wrap">
     {%- if section.settings.title != blank -%}
@@ -64,8 +76,11 @@
     {%- endif -%}
 
     <iframe
+      id="zw-config-iframe-{{ section.id }}"
       class="zw-config-frame"
-      src="https://zazawoods-3d-configurator-production.up.railway.app/{%- if section.settings.preselect_set != blank -%}?set={{ section.settings.preselect_set }}{%- if section.settings.preselect_length != blank -%}&length={{ section.settings.preselect_length }}{%- endif -%}{%- endif -%}"
+      data-zw-base="{{ cfg_base }}"
+      data-zw-default-qs="{{ cfg_qs }}"
+      src="{{ cfg_base }}{{ cfg_qs }}"
       title="Zaza Woods 3D-Konfigurator"
       loading="lazy"
       referrerpolicy="strict-origin-when-cross-origin"
@@ -73,6 +88,29 @@
     ></iframe>
   </div>
 </div>
+
+<script>
+(function () {
+  // Forward query params from the Shopify page URL (e.g. coming from the
+  // Konfigurator button on a product page) into the iframe SRC, so the
+  // configurator opens preselected to the variant the customer just chose.
+  // Whitelisted keys only — never blindly forward arbitrary params.
+  var WHITELIST = ['set', 'length', 'backrests', 'benches', 'finish', 'material'];
+  var iframe = document.getElementById('zw-config-iframe-{{ section.id }}');
+  if (!iframe) return;
+  try {
+    var url = new URL(location.href);
+    var picked = [];
+    WHITELIST.forEach(function (k) {
+      var v = url.searchParams.get(k);
+      if (v != null && v !== '') picked.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+    });
+    if (!picked.length) return;  // no params → keep the default src
+    var base = iframe.getAttribute('data-zw-base') || iframe.src.split('?')[0];
+    iframe.src = base + '?' + picked.join('&');
+  } catch (e) { /* keep default src */ }
+})();
+</script>
 
 {% schema %}
 {
@@ -98,28 +136,11 @@
     { "type": "range", "id": "padding_bottom",    "label": "Abstand unten (px)",                 "min": 0,   "max": 120,  "step": 4,  "default": 0 },
     { "type": "range", "id": "h_padding",         "label": "Seitenabstand (px)",                 "min": 0,   "max": 60,   "step": 2,  "default": 0 },
     { "type": "range", "id": "radius",            "label": "Eckenradius (px)",                   "min": 0,   "max": 24,   "step": 2,  "default": 0 },
-    { "type": "color", "id": "bg_color",          "label": "Section-Hintergrund",                "default": "#F7F6F3" },
+    { "type": "color", "id": "bg_color",          "label": "Hintergrund",                        "default": "#F7F6F3" },
 
-    { "type": "header", "content": "Optional: Vorauswahl beim Öffnen" },
-    { "type": "select", "id": "preselect_set", "label": "Gestell vorwählen", "options": [
-        { "value": "",                  "label": "— Standard (W) —" },
-        { "value": "angle",             "label": "W (Picknicktisch)" },
-        { "value": "picknick_Ushape",   "label": "U (Gartentisch U-Form)" },
-        { "value": "picknick_Xshape",   "label": "X (Gartentisch X-Form)" }
-      ], "default": "" },
-    { "type": "select", "id": "preselect_length", "label": "Länge vorwählen", "options": [
-        { "value": "",    "label": "— Standard (200 cm) —" },
-        { "value": "160", "label": "160 cm" },
-        { "value": "180", "label": "180 cm" },
-        { "value": "200", "label": "200 cm" },
-        { "value": "220", "label": "220 cm" },
-        { "value": "240", "label": "240 cm" },
-        { "value": "260", "label": "260 cm" },
-        { "value": "280", "label": "280 cm" },
-        { "value": "300", "label": "300 cm" },
-        { "value": "350", "label": "350 cm" },
-        { "value": "400", "label": "400 cm" }
-      ], "default": "" }
+    { "type": "header", "content": "Standard-Vorbelegung (optional)" },
+    { "type": "text",  "id": "preselect_set",     "label": "Default Set (angle / picknick_Xshape / picknick_Ushape)" },
+    { "type": "text",  "id": "preselect_length",  "label": "Default Länge (cm)" }
   ],
   "presets": [
     { "name": "3D Konfigurator" }
