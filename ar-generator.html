@@ -148,7 +148,9 @@ function buildConfig(src, cfg) {
     });
   }
 
-  // Flatten visible meshes with baked world transforms
+  // Flatten visible meshes — bake EVERYTHING into geometry so every output
+  // mesh has identity transform. This is the only way to make Scene Viewer
+  // AND iOS Quick Look consistently anchor the model to the detected floor.
   const grp = new THREE.Group();
   const backrestMeshes = [];
   src.updateMatrixWorld(true);
@@ -158,8 +160,10 @@ function buildConfig(src, cfg) {
     while (p) { if (!p.visible) { ok = false; break; } if (p.name && /^Backrest_W_/i.test(p.name)) isBack = true; p = p.parent; }
     if (!ok) return;
     if (isW && isBack && cfg.count === 0) return; // no backrest
-    const mesh = new THREE.Mesh(o.geometry.clone(), o.material);
-    mesh.applyMatrix4(o.matrixWorld);
+    // Bake world matrix into cloned geometry; mesh stays at identity.
+    const geo = o.geometry.clone();
+    geo.applyMatrix4(o.matrixWorld);
+    const mesh = new THREE.Mesh(geo, o.material);
     mesh.userData.isBack = isW && isBack;
     grp.add(mesh);
     if (mesh.userData.isBack) backrestMeshes.push(mesh);
@@ -173,18 +177,20 @@ function buildConfig(src, cfg) {
     backrestMeshes.forEach(m => { m.geometry = halveGeometryX(m.geometry, midX, true); });
   }
 
-  // Stretch length along Z
-  grp.scale.set(1, 1, scaleZ);
-  grp.updateMatrixWorld(true);
+  // Bake length stretch into the geometries (NOT into grp.scale) so the
+  // output GLB has identity transforms throughout.
+  if (scaleZ !== 1) {
+    const stretch = new THREE.Matrix4().makeScale(1, 1, scaleZ);
+    grp.children.forEach(m => { if (m.geometry) m.geometry.applyMatrix4(stretch); });
+  }
 
-  // CRITICAL for AR: anchor the model so its bottom is exactly at Y=0 and its
-  // X/Z centre at the origin. Without this Scene Viewer (Samsung Internet,
-  // Chrome) and iOS Quick Look place the model floating above the floor.
-  const box = new THREE.Box3().setFromObject(grp);
-  if (!box.isEmpty()) {
-    const c = box.getCenter(new THREE.Vector3());
-    grp.position.set(-c.x, -box.min.y, -c.z);
-    grp.updateMatrixWorld(true);
+  // Final pass: bake "bottom at Y=0 / centre at X=Z=0" into the geometries.
+  // Every AR engine reliably anchors to a model whose bbox bottom = Y=0.
+  const finalBox = new THREE.Box3().setFromObject(grp);
+  if (!finalBox.isEmpty()) {
+    const c = finalBox.getCenter(new THREE.Vector3());
+    const shift = new THREE.Matrix4().makeTranslation(-c.x, -finalBox.min.y, -c.z);
+    grp.children.forEach(m => { if (m.geometry) m.geometry.applyMatrix4(shift); });
   }
   return grp;
 }

@@ -1318,7 +1318,13 @@ function loadScriptOnce(flag, attrs) {
   });
 }
 
-// Flatten the currently-visible meshes (with baked world transforms) for export.
+// Flatten the currently-visible meshes for export. CRITICAL: we bake the world
+// matrix directly into a cloned GEOMETRY (not into the mesh node's transform),
+// and we shift the geometry so the model's bbox bottom is exactly at Y=0 and
+// X/Z centred. Every output mesh has identity transform — which is what every
+// AR engine (iOS Quick Look, Android Scene Viewer on Chrome AND on Samsung
+// Internet) reliably anchors to the detected floor. Anything left in node
+// transforms tends to get ignored by one engine or another → floating table.
 function buildExportScene() {
   const grp = new THREE.Group();
   currentRoot.updateMatrixWorld(true);
@@ -1327,20 +1333,18 @@ function buildExportScene() {
     let p = o, ok = true;
     while (p && p !== scene) { if (!p.visible) { ok = false; break; } p = p.parent; }
     if (!ok) return;
-    const m = o.clone();
-    m.applyMatrix4(o.matrixWorld);
+    // Bake world transform into a cloned geometry → mesh stays at identity.
+    const geo = o.geometry.clone();
+    geo.applyMatrix4(o.matrixWorld);
+    const m = new THREE.Mesh(geo, o.material);
     grp.add(m);
   });
-  // CRITICAL for AR on every device: anchor the model so its bottom is exactly
-  // at Y=0 and its X/Z centre at the origin. Without this, Scene Viewer
-  // (Samsung Internet, Chrome) and Quick Look place the model floating above
-  // the floor — which is exactly the bug seen on Samsung.
-  grp.updateMatrixWorld(true);
+  // Now bake "bottom at Y=0 / centre at X=Z=0" into the geometries themselves.
   const box = new THREE.Box3().setFromObject(grp);
   if (!box.isEmpty()) {
     const c = box.getCenter(new THREE.Vector3());
-    grp.position.set(-c.x, -box.min.y, -c.z);
-    grp.updateMatrixWorld(true);
+    const shift = new THREE.Matrix4().makeTranslation(-c.x, -box.min.y, -c.z);
+    grp.children.forEach(m => { if (m.geometry) m.geometry.applyMatrix4(shift); });
   }
   return grp;
 }
