@@ -1,50 +1,117 @@
 {%- comment -%}
   Zaza Woods — Konfigurator-Button auf der Produktseite
   ------------------------------------------------------
-  Zeigt einen "Konfigurator öffnen"-Button im Stil von "In den Warenkorb legen".
+  Visuell identisch zu „In den Warenkorb legen".
 
-  WICHTIG — Template-Guard:
-  Damit der Button NICHT auf jeder Produktseite erscheint, prüfen wir, ob
-  das aktuelle Template das Suffix "konfigurator" hat (z. B. product.konfigurator
-  oder page.konfigurator). Nur dann wird der Button gerendert.
+  Template-Guard: rendert sich NUR auf Templates mit Suffix „konfigurator"
+  (z. B. product.konfigurator). Andere Produkte sehen den Button nicht.
 
-  Wenn du also nur möchtest, dass dieser Button auf dem Picknicktisch erscheint:
-   1. Im Theme-Editor das Produkt öffnen
-   2. Oben rechts → Template ändern → "konfigurator" wählen
-      (sobald ein Template product.konfigurator existiert).
-   3. Andere Produkte behalten "default" → der Button bleibt dort unsichtbar.
+  Variant-Preselect: liest die aktuell gewählte Variante (Größe/Länge,
+  Tischbein-Modell, Anzahl Sitzbänke, Rückenlehne) und schickt sie als
+  URL-Parameter an den Konfigurator. Funktioniert für BEIDE Produkte
+  (Picknicktisch + Gartentisch) — Mapping läuft über Options-NAMEN,
+  nicht Positionen, daher ist der Snippet zukunftssicher.
+
+  Konfigurator akzeptiert:
+    ?set=angle | picknick_Xshape | picknick_Ushape
+    ?length=160…400
+    ?backrests=0|1|2     (nur W)
+    ?benches=0|1|2       (nur X/U)
+
+  Wenn das Mapping nicht greift, bleibt der Default-Link (200cm, W) als
+  Fallback. Die Seite bricht nie.
 
   Bedienung: Theme-Editor → Snippets → selbst-erstellen-button.liquid →
   ALLES ersetzen → Save.
-
-  Optisch identisch zum echten Cart-Button:
-    background    rgb(87,116,118)  = #577476
-    color         white
-    radius        5px
-    height        47 px (= "In den Warenkorb legen")
-    font          15px / 400 / Switzer
-    margins       16 px oben/unten (Atemraum wie um "Jetzt bestellen")
 {%- endcomment -%}
 
 {%- liquid
   assign suffix = template.suffix | downcase
   assign tname  = template.name   | downcase
   assign show   = false
-  if suffix == 'konfigurator'
-    assign show = true
-  elsif tname == 'konfigurator'
+  if suffix == 'konfigurator' or tname == 'konfigurator'
     assign show = true
   endif
 -%}
 
 {%- if show -%}
 
-{%- assign target_url = '/pages/konfigurator' -%}
-{%- if section.settings.preselect_set -%}
-  {%- assign target_url = target_url | append: '?set=' | append: section.settings.preselect_set -%}
-{%- endif -%}
+{%- comment -%} ---------- Initial URL aus current variant (server-side) ---------- {%- endcomment -%}
+{%- liquid
+  assign cur = product.selected_or_first_available_variant
+  assign init_set       = 'angle'
+  assign init_length    = ''
+  assign init_backrests = ''
+  assign init_benches   = ''
 
-<a href="{{ target_url }}" class="zw-konfig-btn" aria-label="Konfigurator öffnen">
+  for opt in product.options_with_values
+    assign oname = opt.name | downcase | strip
+    assign val   = opt.selected_value | default: '' | downcase | strip
+    if val == ''
+      continue
+    endif
+
+    {%- comment -%} length: parse first integer out of "200cm" or "200cm x 180cm" {%- endcomment -%}
+    if oname contains 'maß' or oname contains 'länge' or oname contains 'lange' or oname contains 'size' or oname contains 'length'
+      assign digits = val | replace: 'cm', ' ' | replace: 'x', ' ' | replace: '×', ' '
+      assign parts  = digits | split: ' '
+      for p in parts
+        assign n = p | strip | times: 1
+        if n > 0 and init_length == ''
+          assign init_length = n
+        endif
+      endfor
+    endif
+
+    {%- comment -%} set: leg style {%- endcomment -%}
+    if oname contains 'tischbein' or oname contains 'gestell' or oname contains 'bein'
+      if val contains 'x'
+        assign init_set = 'picknick_Xshape'
+      elsif val contains 'u'
+        assign init_set = 'picknick_Ushape'
+      endif
+    endif
+
+    {%- comment -%} backrests: 0/1/2 {%- endcomment -%}
+    if oname contains 'rückenlehne' or oname contains 'ruckenlehne' or oname contains 'backrest'
+      if val contains 'keine' or val contains 'ohne' or val contains 'no'
+        assign init_backrests = 0
+      elsif val contains '2'
+        assign init_backrests = 2
+      elsif val contains '1'
+        assign init_backrests = 1
+      endif
+    endif
+
+    {%- comment -%} benches: 0/1/2 {%- endcomment -%}
+    if oname contains 'sitzbank' or oname contains 'sitzbanke' or oname contains 'bänke' or oname contains 'banke' or oname contains 'bench'
+      if val contains 'keine' or val contains 'ohne' or val contains 'no'
+        assign init_benches = 0
+      elsif val contains '2'
+        assign init_benches = 2
+      elsif val contains '1'
+        assign init_benches = 1
+      endif
+    endif
+  endfor
+
+  assign target_url = '/pages/konfigurator?set=' | append: init_set
+  if init_length != ''
+    assign target_url = target_url | append: '&length=' | append: init_length
+  endif
+  if init_backrests != ''
+    assign target_url = target_url | append: '&backrests=' | append: init_backrests
+  endif
+  if init_benches != ''
+    assign target_url = target_url | append: '&benches=' | append: init_benches
+  endif
+-%}
+
+<a href="{{ target_url }}"
+   class="zw-konfig-btn"
+   id="zw-konfig-btn-{{ product.id }}"
+   data-zw-konfig="1"
+   aria-label="Konfigurator öffnen">
   <span class="zw-konfig-btn__ic" aria-hidden="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="3" width="7" height="7" rx="1"/>
@@ -58,29 +125,16 @@
 
 <style>
   .zw-konfig-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    height: 47px;
-    min-height: 47px;
-    padding: 0 30px;
-    margin: 16px 0;
-    background: #577476;
-    color: #fff;
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 10px; width: 100%;
+    height: 47px; min-height: 47px;
+    padding: 0 30px; margin: 16px 0;
+    background: #577476; color: #fff;
     font-family: 'Switzer', -apple-system, "Segoe UI", Arial, sans-serif;
-    font-size: 15px;
-    font-weight: 400;
-    line-height: 1;
-    letter-spacing: 0;
-    text-transform: none;
-    text-decoration: none;
-    border: 0;
-    border-radius: 5px;
-    box-shadow: none;
-    cursor: pointer;
-    transition: background .15s, transform .08s;
+    font-size: 15px; font-weight: 400; line-height: 1; letter-spacing: 0;
+    text-transform: none; text-decoration: none;
+    border: 0; border-radius: 5px; box-shadow: none;
+    cursor: pointer; transition: background .15s, transform .08s;
     box-sizing: border-box;
   }
   .zw-konfig-btn:hover  { background: #486264; }
@@ -93,5 +147,128 @@
     .zw-konfig-btn { height: 44px; min-height: 44px; font-size: 14.5px; margin: 12px 0; }
   }
 </style>
+
+<script>
+(function () {
+  // Reactive variant→konfigurator URL updater. Runs in the browser; if any of
+  // this errors it just leaves the server-rendered href as-is — the button
+  // still works as a normal link.
+  var btn = document.getElementById('zw-konfig-btn-{{ product.id }}');
+  if (!btn) return;
+
+  // Full variant catalog of this product, from Shopify's JSON.
+  // Each variant lists option1/option2/option3 and the option NAMES are on the
+  // product itself — together they let us map a chosen variant ID back to
+  // human-readable option values, which we then translate into konfig params.
+  var PRODUCT = {{ product | json }};
+  var OPTION_NAMES = (PRODUCT.options || []).map(function (n) {
+    return (typeof n === 'string' ? n : (n && n.name || '')).toLowerCase().trim();
+  });
+
+  function firstInt(s) {
+    var m = (s || '').match(/\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+
+  // Translate one option (name, value) into konfig params.
+  function mapOne(name, value) {
+    if (!value) return null;
+    var n = name.toLowerCase();
+    var v = value.toLowerCase().trim();
+    if (/maß|länge|lange|size|length/.test(n)) {
+      var L = firstInt(v);
+      return L ? { length: L } : null;
+    }
+    if (/tischbein|gestell|bein/.test(n)) {
+      if (v.indexOf('x') !== -1) return { set: 'picknick_Xshape' };
+      if (v.indexOf('u') !== -1) return { set: 'picknick_Ushape' };
+      if (/(^|\W)w(\W|$)/.test(v)) return { set: 'angle' };
+      return null;
+    }
+    if (/rückenlehne|ruckenlehne|backrest/.test(n)) {
+      if (/keine|ohne|kein\b|no\b/.test(v)) return { backrests: 0 };
+      if (v.indexOf('2') !== -1) return { backrests: 2 };
+      if (v.indexOf('1') !== -1) return { backrests: 1 };
+      return null;
+    }
+    if (/sitzbank|sitzbänke|bänke|banke|bench/.test(n)) {
+      if (/keine|ohne|kein\b|no\b/.test(v)) return { benches: 0 };
+      if (v.indexOf('2') !== -1) return { benches: 2 };
+      if (v.indexOf('1') !== -1) return { benches: 1 };
+      return null;
+    }
+    return null;
+  }
+
+  function paramsFromVariant(variant) {
+    if (!variant) return null;
+    var vals = [variant.option1, variant.option2, variant.option3];
+    // Picknicktisch has only W → force set=angle even though it isn't an option.
+    var p = { set: 'angle' };
+    for (var i = 0; i < OPTION_NAMES.length; i++) {
+      var m = mapOne(OPTION_NAMES[i], vals[i]);
+      if (m) Object.assign(p, m);
+    }
+    return p;
+  }
+
+  function buildUrl(p) {
+    if (!p) return null;
+    var qs = ['set=' + encodeURIComponent(p.set || 'angle')];
+    if (p.length != null)    qs.push('length='    + p.length);
+    if (p.backrests != null) qs.push('backrests=' + p.backrests);
+    if (p.benches != null)   qs.push('benches='   + p.benches);
+    return '/pages/konfigurator?' + qs.join('&');
+  }
+
+  function currentVariantId() {
+    // Most Shopify themes mirror the choice into <select name="id"> or
+    // <input name="id"> on the product form.
+    var el = document.querySelector('form[action*="/cart/add"] [name="id"]');
+    if (el && el.value) return parseInt(el.value, 10) || null;
+    // Fallback: ?variant=… in the URL.
+    var m = location.search.match(/[?&]variant=(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function findVariant(id) {
+    if (!id || !PRODUCT.variants) return null;
+    for (var i = 0; i < PRODUCT.variants.length; i++) {
+      if (PRODUCT.variants[i].id === id) return PRODUCT.variants[i];
+    }
+    return null;
+  }
+
+  function refresh() {
+    try {
+      var id = currentVariantId();
+      var variant = findVariant(id);
+      var p = paramsFromVariant(variant);
+      var url = buildUrl(p);
+      if (url) btn.setAttribute('href', url);
+    } catch (e) { /* keep the server-rendered href */ }
+  }
+
+  // (1) Bind to native change events on the cart form.
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (!t) return;
+    if (t.name === 'id' || (t.form && t.form.action && /\/cart\/add/.test(t.form.action))) {
+      refresh();
+    }
+  }, true);
+
+  // (2) Several Shopify themes fire a custom 'variant:change' / 'variantChange'
+  //     event on the product form. Catch both names just to be safe.
+  ['variant:change', 'variantChange', 'product:variantChange'].forEach(function (ev) {
+    document.addEventListener(ev, refresh, true);
+  });
+
+  // (3) Defensive: poll once shortly after load in case the theme finishes
+  //     selecting the default variant after our snippet ran.
+  setTimeout(refresh, 200);
+  setTimeout(refresh, 1200);
+})();
+</script>
 
 {%- endif -%}
