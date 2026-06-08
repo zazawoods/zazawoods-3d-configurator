@@ -773,6 +773,12 @@ loader.setDRACOLoader(draco);
 const cache = {};
 let currentRoot = null;
 
+// Promise that resolves once the active model is fully loaded AND recentred.
+// AR launch awaits this so the first tap can't race the GLB load and report
+// a false "AR nicht verfügbar".
+let modelReadyResolve;
+let modelReady = new Promise(r => (modelReadyResolve = r));
+
 // --- Fallback wood texture ---------------------------------------------------
 // The Angle and X GLB files embed a SOLID-BLACK 1024² placeholder instead of a
 // real wood texture; the Modern file also has the black placeholder on its
@@ -929,6 +935,9 @@ function loadSet(key) {
 }
 
 async function setActiveSet(setKey) {
+  // Reset the readiness promise — anyone awaiting AR launch from now on
+  // waits for THIS load to finish, not the previous one.
+  modelReady = new Promise(r => (modelReadyResolve = r));
   if (currentRoot) scene.remove(currentRoot);
   let root;
   try {
@@ -947,6 +956,7 @@ async function setActiveSet(setKey) {
   applyState();
   recenter();
   applyBackrestClip();
+  modelReadyResolve();   // ← AR launch (and anyone else waiting) can proceed now.
 }
 
 // On the W model the GLB bakes BOTH backrests into a single mesh per length,
@@ -1450,6 +1460,21 @@ let arLaunchInFlight = null;
 async function launchMobileAR() {
   if (arLaunchInFlight) return arLaunchInFlight;        // ignore double-taps
   arLaunchInFlight = (async () => {
+    // If the model isn't fully loaded yet, the previous behaviour was an
+    // instant "AR nicht verfügbar" on first tap. Now we surface a loading
+    // toast and AWAIT the load — the AR launch fires as soon as the model
+    // is ready, in the SAME user-initiated flow.
+    if (!currentRoot) {
+      showToast('AR wird geladen …');
+      // 15-second safety cap (slow networks); if we still don't have a model
+      // by then, fall through and treat it as truly unavailable.
+      await Promise.race([
+        modelReady,
+        new Promise(r => setTimeout(r, 15000))
+      ]);
+    }
+    if (!currentRoot) { showToast('AR nicht verfügbar'); return; }
+
     let c = arCache[arKey()];
     const ready = isIOS ? (c && c.usdz) : (c && c.glb);
     if (!ready) { showToast('AR …'); c = await prepareAR(false); }
