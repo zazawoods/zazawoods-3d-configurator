@@ -36,9 +36,8 @@
 
 {%- if show -%}
 
-{%- comment -%} ---------- Initial URL aus current variant (server-side) ---------- {%- endcomment -%}
 {%- liquid
-  assign cur = product.selected_or_first_available_variant
+  # Initial URL aus current variant (server-side rendering)
   assign init_set       = 'angle'
   assign init_length    = ''
   assign init_backrests = ''
@@ -51,7 +50,7 @@
       continue
     endif
 
-    {%- comment -%} length: parse first integer out of "200cm" or "200cm x 180cm" {%- endcomment -%}
+    # length: parse first integer out of "200cm" or "200cm x 180cm"
     if oname contains 'maß' or oname contains 'länge' or oname contains 'lange' or oname contains 'size' or oname contains 'length'
       assign digits = val | replace: 'cm', ' ' | replace: 'x', ' ' | replace: '×', ' '
       assign parts  = digits | split: ' '
@@ -63,7 +62,7 @@
       endfor
     endif
 
-    {%- comment -%} set: leg style {%- endcomment -%}
+    # set: leg style
     if oname contains 'tischbein' or oname contains 'gestell' or oname contains 'bein'
       if val contains 'x'
         assign init_set = 'picknick_Xshape'
@@ -72,7 +71,7 @@
       endif
     endif
 
-    {%- comment -%} backrests: 0/1/2 {%- endcomment -%}
+    # backrests: 0/1/2
     if oname contains 'rückenlehne' or oname contains 'ruckenlehne' or oname contains 'backrest'
       if val contains 'keine' or val contains 'ohne' or val contains 'no'
         assign init_backrests = 0
@@ -83,7 +82,7 @@
       endif
     endif
 
-    {%- comment -%} benches: 0/1/2 {%- endcomment -%}
+    # benches: 0/1/2
     if oname contains 'sitzbank' or oname contains 'sitzbanke' or oname contains 'bänke' or oname contains 'banke' or oname contains 'bench'
       if val contains 'keine' or val contains 'ohne' or val contains 'no'
         assign init_benches = 0
@@ -157,9 +156,6 @@
   if (!btn) return;
 
   // Full variant catalog of this product, from Shopify's JSON.
-  // Each variant lists option1/option2/option3 and the option NAMES are on the
-  // product itself — together they let us map a chosen variant ID back to
-  // human-readable option values, which we then translate into konfig params.
   var PRODUCT = {{ product | json }};
   var OPTION_NAMES = (PRODUCT.options || []).map(function (n) {
     return (typeof n === 'string' ? n : (n && n.name || '')).toLowerCase().trim();
@@ -170,7 +166,6 @@
     return m ? parseInt(m[0], 10) : null;
   }
 
-  // Translate one option (name, value) into konfig params.
   function mapOne(name, value) {
     if (!value) return null;
     var n = name.toLowerCase();
@@ -222,11 +217,8 @@
   }
 
   function currentVariantId() {
-    // Most Shopify themes mirror the choice into <select name="id"> or
-    // <input name="id"> on the product form.
     var el = document.querySelector('form[action*="/cart/add"] [name="id"]');
     if (el && el.value) return parseInt(el.value, 10) || null;
-    // Fallback: ?variant=… in the URL.
     var m = location.search.match(/[?&]variant=(\d+)/);
     return m ? parseInt(m[1], 10) : null;
   }
@@ -258,8 +250,7 @@
     }
   }, true);
 
-  // (2) Several Shopify themes fire a custom 'variant:change' / 'variantChange'
-  //     event on the product form. Catch both names just to be safe.
+  // (2) Several Shopify themes fire a custom 'variant:change' event.
   ['variant:change', 'variantChange', 'product:variantChange'].forEach(function (ev) {
     document.addEventListener(ev, refresh, true);
   });
