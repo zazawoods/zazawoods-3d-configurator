@@ -114,9 +114,13 @@
   var btn = document.getElementById('zw-konfig-btn-{{ product.id }}');
   if (!btn) return;
   var PRODUCT = {{ product | json }};
-  var OPTION_NAMES = (PRODUCT.options || []).map(function (n) {
+  var OPTION_NAMES_LOWER = (PRODUCT.options || []).map(function (n) {
     return (typeof n === 'string' ? n : (n && n.name || '')).toLowerCase().trim();
   });
+  var OPTION_NAMES_RAW = (PRODUCT.options || []).map(function (n) {
+    return (typeof n === 'string' ? n : (n && n.name || ''));
+  });
+
   function firstInt(s) {
     var m = (s || '').match(/\d+/);
     return m ? parseInt(m[0], 10) : null;
@@ -126,8 +130,7 @@
     var n = name.toLowerCase();
     var v = value.toLowerCase().trim();
     if (/maß|länge|lange|size|length/.test(n)) {
-      var L = firstInt(v);
-      return L ? { length: L } : null;
+      var L = firstInt(v); return L ? { length: L } : null;
     }
     if (/tischbein|gestell|bein/.test(n)) {
       if (v.indexOf('x') !== -1) return { set: 'picknick_Xshape' };
@@ -149,16 +152,54 @@
     }
     return null;
   }
-  function paramsFromVariant(variant) {
-    if (!variant) return null;
-    var vals = [variant.option1, variant.option2, variant.option3];
-    var p = { set: 'angle' };
-    for (var i = 0; i < OPTION_NAMES.length; i++) {
-      var m = mapOne(OPTION_NAMES[i], vals[i]);
+
+  // Read the CURRENTLY-CHOSEN option values directly from the page.
+  // Works for any Shopify theme: Dawn's <variant-selects> with <select>,
+  // <variant-radios> with radios, or any custom theme using the standard
+  // name="options[Foo]" convention.
+  function readSelectedOptions() {
+    var picked = {};   // option name → selected value
+    // 1) Variant pickers (Dawn, Refresh, most modern themes)
+    var pickers = document.querySelectorAll('variant-selects, variant-radios');
+    pickers.forEach(function (p) {
+      p.querySelectorAll('select').forEach(function (s) {
+        var m = (s.name || '').match(/options\[(.+)\]/);
+        if (m) picked[m[1]] = s.value;
+      });
+      p.querySelectorAll('input[type="radio"]:checked').forEach(function (r) {
+        var m = (r.name || '').match(/options\[(.+)\]/);
+        if (m) picked[m[1]] = r.value;
+      });
+    });
+    // 2) Fallback: any standalone option inputs (older themes)
+    document.querySelectorAll('input[name^="options["], select[name^="options["]').forEach(function (el) {
+      var m = (el.name || '').match(/options\[(.+)\]/);
+      if (!m) return;
+      if (picked[m[1]]) return;
+      if (el.tagName === 'SELECT') {
+        picked[m[1]] = el.value;
+      } else if (el.type === 'radio' && el.checked) {
+        picked[m[1]] = el.value;
+      } else if (el.type !== 'radio' && el.type !== 'checkbox') {
+        picked[m[1]] = el.value;
+      }
+    });
+    return picked;
+  }
+
+  function paramsFromSelectedOptions() {
+    var picked = readSelectedOptions();
+    var p = { set: 'angle' };  // Picknicktisch default (no leg option there)
+    for (var i = 0; i < OPTION_NAMES_RAW.length; i++) {
+      var rawName = OPTION_NAMES_RAW[i];
+      var v = picked[rawName];
+      if (!v) continue;
+      var m = mapOne(rawName, v);
       if (m) Object.assign(p, m);
     }
     return p;
   }
+
   function buildUrl(p) {
     if (!p) return null;
     var qs = ['set=' + encodeURIComponent(p.set || 'angle')];
@@ -167,38 +208,36 @@
     if (p.benches != null)   qs.push('benches='   + p.benches);
     return '/pages/konfigurator?' + qs.join('&');
   }
-  function currentVariantId() {
-    var el = document.querySelector('form[action*="/cart/add"] [name="id"]');
-    if (el && el.value) return parseInt(el.value, 10) || null;
-    var m = location.search.match(/[?&]variant=(\d+)/);
-    return m ? parseInt(m[1], 10) : null;
-  }
-  function findVariant(id) {
-    if (!id || !PRODUCT.variants) return null;
-    for (var i = 0; i < PRODUCT.variants.length; i++) {
-      if (PRODUCT.variants[i].id === id) return PRODUCT.variants[i];
-    }
-    return null;
-  }
+
   function refresh() {
     try {
-      var id = currentVariantId();
-      var variant = findVariant(id);
-      var p = paramsFromVariant(variant);
+      var p = paramsFromSelectedOptions();
       var url = buildUrl(p);
       if (url) btn.setAttribute('href', url);
     } catch (e) { }
   }
+
+  // Listen for any change on a variant-options control.
+  // Conditions match Dawn (<select name="options[…]">), variant-radios
+  // (radio inputs with the same naming), or hidden [name="id"] updates.
   document.addEventListener('change', function (ev) {
     var t = ev.target;
     if (!t) return;
-    if (t.name === 'id' || (t.form && t.form.action && /\/cart\/add/.test(t.form.action))) {
-      refresh();
+    var name = t.name || '';
+    var isOpt = name === 'id' || name.indexOf('options[') === 0;
+    var inPicker = t.closest && t.closest('variant-selects, variant-radios');
+    if (isOpt || inPicker) {
+      // Slight defer so the theme can finish its own variant-change processing.
+      setTimeout(refresh, 30);
     }
   }, true);
-  ['variant:change', 'variantChange', 'product:variantChange'].forEach(function (ev) {
-    document.addEventListener(ev, refresh, true);
+
+  // Custom events some themes dispatch.
+  ['variant:change', 'variantChange', 'product:variantChange', 'on:variant:change'].forEach(function (ev) {
+    document.addEventListener(ev, function () { setTimeout(refresh, 30); }, true);
   });
+
+  // First-paint sync (in case theme picks a default variant after our snippet runs).
   setTimeout(refresh, 200);
   setTimeout(refresh, 1200);
 })();
