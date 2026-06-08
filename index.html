@@ -1374,8 +1374,12 @@ const arKey = () => `${state.set}_${state.length}_${state.benches}_${state.backr
 const arCache = {};          // key -> { glb, usdz }
 let arBusyKey = null;
 
+// Last AR error — exposed in console + accessible via window.__zwArErr so we
+// can diagnose without having to attach DevTools (handy on a phone).
+window.__zwArErr = null;
+
 async function prepareAR(both) {
-  if (!currentRoot) return null;
+  if (!currentRoot) { window.__zwArErr = 'currentRoot=null'; return null; }
   const key = arKey();
   const have = arCache[key];
   const needGlb = both || isAndroid || !isMobileDevice;
@@ -1395,7 +1399,11 @@ async function prepareAR(both) {
       out.usdz = await uploadModel(usdz.buffer || usdz, 'usdz');
     }
     arCache[key] = out;
-  } catch (e) { /* leave cache as-is */ }
+  } catch (e) {
+    // Don't poison the cache — but DO surface the failure so it can be diagnosed.
+    window.__zwArErr = (e && (e.stack || e.message)) || String(e);
+    console.error('[AR] prepare failed:', e);
+  }
   arBusyKey = null;
   return arCache[key] || null;
 }
@@ -1473,12 +1481,19 @@ async function launchMobileAR() {
         new Promise(r => setTimeout(r, 15000))
       ]);
     }
-    if (!currentRoot) { showToast('AR nicht verfügbar'); return; }
+    if (!currentRoot) { showToast('AR nicht verfügbar (Modell)'); return; }
 
     let c = arCache[arKey()];
     const ready = isIOS ? (c && c.usdz) : (c && c.glb);
     if (!ready) { showToast('AR …'); c = await prepareAR(false); }
-    if (!c) { showToast('AR nicht verfügbar'); return; }
+    if (!c) {
+      // Surface the underlying reason so we can actually fix it.
+      const err = window.__zwArErr || 'unbekannt';
+      const tag = isIOS ? 'iOS' : (isAndroid ? 'Android' : 'Web');
+      showToast('AR fehlgeschlagen [' + tag + ']: ' + String(err).slice(0, 90));
+      console.error('[AR] launch aborted. Last error:', err);
+      return;
+    }
     if (isIOS && c.usdz)      openIosAR(c.usdz);        // iPhone/iPad → AR Quick Look
     else if (c.glb)           openAndroidAR(c.glb);     // any Android browser → Scene Viewer
     else                      showToast('AR auf diesem Gerät nicht verfügbar');
