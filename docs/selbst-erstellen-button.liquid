@@ -1,110 +1,72 @@
-{%- comment -%}
-  Zaza Woods — Konfigurator-Button auf der Produktseite
-  ------------------------------------------------------
-  Visuell identisch zu „In den Warenkorb legen".
-
-  Template-Guard: rendert sich NUR auf Templates mit Suffix „konfigurator"
-  (z. B. product.konfigurator). Andere Produkte sehen den Button nicht.
-
-  Variant-Preselect: liest die aktuell gewählte Variante (Größe/Länge,
-  Tischbein-Modell, Anzahl Sitzbänke, Rückenlehne) und schickt sie als
-  URL-Parameter an den Konfigurator. Funktioniert für BEIDE Produkte
-  (Picknicktisch + Gartentisch) — Mapping läuft über Options-NAMEN,
-  nicht Positionen, daher ist der Snippet zukunftssicher.
-
-  Konfigurator akzeptiert:
-    ?set=angle | picknick_Xshape | picknick_Ushape
-    ?length=160…400
-    ?backrests=0|1|2     (nur W)
-    ?benches=0|1|2       (nur X/U)
-
-  Wenn das Mapping nicht greift, bleibt der Default-Link (200cm, W) als
-  Fallback. Die Seite bricht nie.
-
-  Bedienung: Theme-Editor → Snippets → selbst-erstellen-button.liquid →
-  ALLES ersetzen → Save.
-{%- endcomment -%}
-
-{%- liquid
-  assign suffix = template.suffix | downcase
-  assign tname  = template.name   | downcase
-  assign show   = false
-  if suffix == 'konfigurator' or tname == 'konfigurator'
-    assign show = true
-  endif
--%}
+{%- assign suffix = template.suffix | downcase -%}
+{%- assign tname  = template.name   | downcase -%}
+{%- assign show = false -%}
+{%- if suffix == 'konfigurator' or tname == 'konfigurator' -%}
+  {%- assign show = true -%}
+{%- endif -%}
 
 {%- if show -%}
 
-{%- liquid
-  # Initial URL aus current variant (server-side rendering)
-  assign init_set       = 'angle'
-  assign init_length    = ''
-  assign init_backrests = ''
-  assign init_benches   = ''
+{%- assign init_set       = 'angle' -%}
+{%- assign init_length    = '' -%}
+{%- assign init_backrests = '' -%}
+{%- assign init_benches   = '' -%}
 
-  for opt in product.options_with_values
-    assign oname = opt.name | downcase | strip
-    assign val   = opt.selected_value | default: '' | downcase | strip
-    if val == ''
-      continue
-    endif
+{%- for opt in product.options_with_values -%}
+  {%- assign oname = opt.name | downcase | strip -%}
+  {%- assign val   = opt.selected_value | default: '' | downcase | strip -%}
+  {%- if val == '' -%}{%- continue -%}{%- endif -%}
 
-    # length: parse first integer out of "200cm" or "200cm x 180cm"
-    if oname contains 'maß' or oname contains 'länge' or oname contains 'lange' or oname contains 'size' or oname contains 'length'
-      assign digits = val | replace: 'cm', ' ' | replace: 'x', ' ' | replace: '×', ' '
-      assign parts  = digits | split: ' '
-      for p in parts
-        assign n = p | strip | times: 1
-        if n > 0 and init_length == ''
-          assign init_length = n
-        endif
-      endfor
-    endif
+  {%- if oname contains 'maß' or oname contains 'länge' or oname contains 'lange' or oname contains 'size' or oname contains 'length' -%}
+    {%- assign digits = val | replace: 'cm', ' ' | replace: 'x', ' ' | replace: '×', ' ' -%}
+    {%- assign parts = digits | split: ' ' -%}
+    {%- for p in parts -%}
+      {%- assign n = p | strip | times: 1 -%}
+      {%- if n > 0 and init_length == '' -%}
+        {%- assign init_length = n -%}
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endif -%}
 
-    # set: leg style
-    if oname contains 'tischbein' or oname contains 'gestell' or oname contains 'bein'
-      if val contains 'x'
-        assign init_set = 'picknick_Xshape'
-      elsif val contains 'u'
-        assign init_set = 'picknick_Ushape'
-      endif
-    endif
+  {%- if oname contains 'tischbein' or oname contains 'gestell' or oname contains 'bein' -%}
+    {%- if val contains 'x' -%}
+      {%- assign init_set = 'picknick_Xshape' -%}
+    {%- elsif val contains 'u' -%}
+      {%- assign init_set = 'picknick_Ushape' -%}
+    {%- endif -%}
+  {%- endif -%}
 
-    # backrests: 0/1/2
-    if oname contains 'rückenlehne' or oname contains 'ruckenlehne' or oname contains 'backrest'
-      if val contains 'keine' or val contains 'ohne' or val contains 'no'
-        assign init_backrests = 0
-      elsif val contains '2'
-        assign init_backrests = 2
-      elsif val contains '1'
-        assign init_backrests = 1
-      endif
-    endif
+  {%- if oname contains 'rückenlehne' or oname contains 'ruckenlehne' or oname contains 'backrest' -%}
+    {%- if val contains 'keine' or val contains 'ohne' or val contains 'no' -%}
+      {%- assign init_backrests = 0 -%}
+    {%- elsif val contains '2' -%}
+      {%- assign init_backrests = 2 -%}
+    {%- elsif val contains '1' -%}
+      {%- assign init_backrests = 1 -%}
+    {%- endif -%}
+  {%- endif -%}
 
-    # benches: 0/1/2
-    if oname contains 'sitzbank' or oname contains 'sitzbanke' or oname contains 'bänke' or oname contains 'banke' or oname contains 'bench'
-      if val contains 'keine' or val contains 'ohne' or val contains 'no'
-        assign init_benches = 0
-      elsif val contains '2'
-        assign init_benches = 2
-      elsif val contains '1'
-        assign init_benches = 1
-      endif
-    endif
-  endfor
+  {%- if oname contains 'sitzbank' or oname contains 'sitzbänke' or oname contains 'bänke' or oname contains 'banke' or oname contains 'bench' -%}
+    {%- if val contains 'keine' or val contains 'ohne' or val contains 'no' -%}
+      {%- assign init_benches = 0 -%}
+    {%- elsif val contains '2' -%}
+      {%- assign init_benches = 2 -%}
+    {%- elsif val contains '1' -%}
+      {%- assign init_benches = 1 -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
 
-  assign target_url = '/pages/konfigurator?set=' | append: init_set
-  if init_length != ''
-    assign target_url = target_url | append: '&length=' | append: init_length
-  endif
-  if init_backrests != ''
-    assign target_url = target_url | append: '&backrests=' | append: init_backrests
-  endif
-  if init_benches != ''
-    assign target_url = target_url | append: '&benches=' | append: init_benches
-  endif
--%}
+{%- assign target_url = '/pages/konfigurator?set=' | append: init_set -%}
+{%- if init_length != '' -%}
+  {%- assign target_url = target_url | append: '&length=' | append: init_length -%}
+{%- endif -%}
+{%- if init_backrests != '' -%}
+  {%- assign target_url = target_url | append: '&backrests=' | append: init_backrests -%}
+{%- endif -%}
+{%- if init_benches != '' -%}
+  {%- assign target_url = target_url | append: '&benches=' | append: init_benches -%}
+{%- endif -%}
 
 <a href="{{ target_url }}"
    class="zw-konfig-btn"
@@ -149,23 +111,16 @@
 
 <script>
 (function () {
-  // Reactive variant→konfigurator URL updater. Runs in the browser; if any of
-  // this errors it just leaves the server-rendered href as-is — the button
-  // still works as a normal link.
   var btn = document.getElementById('zw-konfig-btn-{{ product.id }}');
   if (!btn) return;
-
-  // Full variant catalog of this product, from Shopify's JSON.
   var PRODUCT = {{ product | json }};
   var OPTION_NAMES = (PRODUCT.options || []).map(function (n) {
     return (typeof n === 'string' ? n : (n && n.name || '')).toLowerCase().trim();
   });
-
   function firstInt(s) {
     var m = (s || '').match(/\d+/);
     return m ? parseInt(m[0], 10) : null;
   }
-
   function mapOne(name, value) {
     if (!value) return null;
     var n = name.toLowerCase();
@@ -194,11 +149,9 @@
     }
     return null;
   }
-
   function paramsFromVariant(variant) {
     if (!variant) return null;
     var vals = [variant.option1, variant.option2, variant.option3];
-    // Picknicktisch has only W → force set=angle even though it isn't an option.
     var p = { set: 'angle' };
     for (var i = 0; i < OPTION_NAMES.length; i++) {
       var m = mapOne(OPTION_NAMES[i], vals[i]);
@@ -206,7 +159,6 @@
     }
     return p;
   }
-
   function buildUrl(p) {
     if (!p) return null;
     var qs = ['set=' + encodeURIComponent(p.set || 'angle')];
@@ -215,14 +167,12 @@
     if (p.benches != null)   qs.push('benches='   + p.benches);
     return '/pages/konfigurator?' + qs.join('&');
   }
-
   function currentVariantId() {
     var el = document.querySelector('form[action*="/cart/add"] [name="id"]');
     if (el && el.value) return parseInt(el.value, 10) || null;
     var m = location.search.match(/[?&]variant=(\d+)/);
     return m ? parseInt(m[1], 10) : null;
   }
-
   function findVariant(id) {
     if (!id || !PRODUCT.variants) return null;
     for (var i = 0; i < PRODUCT.variants.length; i++) {
@@ -230,7 +180,6 @@
     }
     return null;
   }
-
   function refresh() {
     try {
       var id = currentVariantId();
@@ -238,10 +187,8 @@
       var p = paramsFromVariant(variant);
       var url = buildUrl(p);
       if (url) btn.setAttribute('href', url);
-    } catch (e) { /* keep the server-rendered href */ }
+    } catch (e) { }
   }
-
-  // (1) Bind to native change events on the cart form.
   document.addEventListener('change', function (ev) {
     var t = ev.target;
     if (!t) return;
@@ -249,14 +196,9 @@
       refresh();
     }
   }, true);
-
-  // (2) Several Shopify themes fire a custom 'variant:change' event.
   ['variant:change', 'variantChange', 'product:variantChange'].forEach(function (ev) {
     document.addEventListener(ev, refresh, true);
   });
-
-  // (3) Defensive: poll once shortly after load in case the theme finishes
-  //     selecting the default variant after our snippet ran.
   setTimeout(refresh, 200);
   setTimeout(refresh, 1200);
 })();
