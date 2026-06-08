@@ -1372,40 +1372,51 @@ async function uploadModel(bytes, ext) {
 // Cache uploaded model URLs per configuration so launching is instant.
 const arKey = () => `${state.set}_${state.length}_${state.benches}_${state.backrests}`;
 const arCache = {};          // key -> { glb, usdz }
-let arBusyKey = null;
+
+// Single-flight per (key, both) — a second call while one is in flight gets
+// the SAME promise so it waits for the existing work to finish instead of
+// returning null (which caused the bogus "AR nicht verfügbar" toast).
+const arPending = new Map();
 
 // Last AR error — exposed in console + accessible via window.__zwArErr so we
 // can diagnose without having to attach DevTools (handy on a phone).
 window.__zwArErr = null;
 
-async function prepareAR(both) {
-  if (!currentRoot) { window.__zwArErr = 'currentRoot=null'; return null; }
+function prepareAR(both) {
+  if (!currentRoot) { window.__zwArErr = 'currentRoot=null'; return Promise.resolve(null); }
   const key = arKey();
   const have = arCache[key];
   const needGlb = both || isAndroid || !isMobileDevice;
   const needUsdz = both || isIOS || !isMobileDevice;
-  if (have && (!needGlb || have.glb) && (!needUsdz || have.usdz)) return have;
-  if (arBusyKey === key) return have || null;
-  arBusyKey = key;
-  try {
-    const grp = buildExportScene();
-    const out = Object.assign({}, arCache[key]);
-    if (needGlb && !out.glb) {
-      const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
-      out.glb = await uploadModel(glb, 'glb');
+  if (have && (!needGlb || have.glb) && (!needUsdz || have.usdz)) return Promise.resolve(have);
+
+  // If another prepareAR is already running for this key+coverage, reuse it.
+  const pendKey = key + '|' + (needGlb?'g':'') + (needUsdz?'u':'');
+  if (arPending.has(pendKey)) return arPending.get(pendKey);
+
+  const work = (async () => {
+    try {
+      const grp = buildExportScene();
+      const out = Object.assign({}, arCache[key]);
+      if (needGlb && !out.glb) {
+        const glb = await new GLTFExporter().parseAsync(grp, { binary: true });
+        out.glb = await uploadModel(glb, 'glb');
+      }
+      if (needUsdz && !out.usdz) {
+        const usdz = await new USDZExporter().parse(grp);
+        out.usdz = await uploadModel(usdz.buffer || usdz, 'usdz');
+      }
+      arCache[key] = out;
+    } catch (e) {
+      window.__zwArErr = (e && (e.stack || e.message)) || String(e);
+      console.error('[AR] prepare failed:', e);
+    } finally {
+      arPending.delete(pendKey);
     }
-    if (needUsdz && !out.usdz) {
-      const usdz = await new USDZExporter().parse(grp);
-      out.usdz = await uploadModel(usdz.buffer || usdz, 'usdz');
-    }
-    arCache[key] = out;
-  } catch (e) {
-    // Don't poison the cache — but DO surface the failure so it can be diagnosed.
-    window.__zwArErr = (e && (e.stack || e.message)) || String(e);
-    console.error('[AR] prepare failed:', e);
-  }
-  arBusyKey = null;
-  return arCache[key] || null;
+    return arCache[key] || null;
+  })();
+  arPending.set(pendKey, work);
+  return work;
 }
 
 // Build the right Scene Viewer URL for the current Android browser.
