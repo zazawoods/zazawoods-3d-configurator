@@ -5,12 +5,18 @@
   Shopify-Navigation aus, sodass der "In den Warenkorb"-Button OHNE Scrollen
   sichtbar ist. Kein Titel, keine seitlichen Ränder.
 
-  WICHTIG — Variant-Passthrough:
-  Wenn die Konfigurator-Seite mit Query-Parametern aufgerufen wird (z. B.
-  /pages/konfigurator?set=picknick_Xshape&length=280&benches=2 vom
-  Konfigurator-Button auf der Produktseite), übernimmt das Inline-Script
-  unten DIESE Parameter und hängt sie an die iframe-URL an. Ohne diesen
-  Passthrough würde der Konfigurator immer mit Default (200 cm, W) öffnen.
+  WICHTIG — Variant-Passthrough (Desktop UND Mobile):
+  Der iframe wird OHNE src gerendert. Sobald die Section im DOM ist, liest
+  ein Inline-Script die URL-Parameter (set, length, backrests, benches…)
+  und setzt erst dann iframe.src auf die finale URL.
+
+  Dieses "Defer-and-set" verhindert die Race-Condition auf Mobile (Safari
+  iOS / Chrome Android), wo der iframe sonst manchmal mit dem Default-src
+  startet, BEVOR das Script die Parameter anhängen kann — und die
+  Vorbelegung damit verloren ging.
+
+  Auf dem Desktop wirkt sich das nicht spürbar aus (das Script läuft
+  ohnehin sofort beim Parsen).
 
   Kopiere den Inhalt in den Theme-Editor →
   Sections → konfigurator-embed.liquid → ALLES ersetzen → Save.
@@ -58,11 +64,11 @@
 </style>
 
 {%- assign cfg_base = 'https://zazawoods-3d-configurator-production.up.railway.app/' -%}
-{%- assign cfg_qs = '' -%}
+{%- assign cfg_default_qs = '' -%}
 {%- if section.settings.preselect_set != blank -%}
-  {%- assign cfg_qs = '?set=' | append: section.settings.preselect_set -%}
+  {%- assign cfg_default_qs = '?set=' | append: section.settings.preselect_set -%}
   {%- if section.settings.preselect_length != blank -%}
-    {%- assign cfg_qs = cfg_qs | append: '&length=' | append: section.settings.preselect_length -%}
+    {%- assign cfg_default_qs = cfg_default_qs | append: '&length=' | append: section.settings.preselect_length -%}
   {%- endif -%}
 {%- endif -%}
 
@@ -79,36 +85,53 @@
       id="zw-config-iframe-{{ section.id }}"
       class="zw-config-frame"
       data-zw-base="{{ cfg_base }}"
-      data-zw-default-qs="{{ cfg_qs }}"
-      src="{{ cfg_base }}{{ cfg_qs }}"
+      data-zw-default-qs="{{ cfg_default_qs }}"
       title="Zaza Woods 3D-Konfigurator"
-      loading="lazy"
       referrerpolicy="strict-origin-when-cross-origin"
-      allow="camera; xr-spatial-tracking"
-    ></iframe>
+      allow="camera; xr-spatial-tracking"></iframe>
   </div>
 </div>
 
 <script>
 (function () {
-  // Forward query params from the Shopify page URL (e.g. coming from the
-  // Konfigurator button on a product page) into the iframe SRC, so the
-  // configurator opens preselected to the variant the customer just chose.
-  // Whitelisted keys only — never blindly forward arbitrary params.
+  // Final-src builder: runs ONCE on parse, before the iframe has any src,
+  // so there is no race between the default load and the param-aware load.
+  // Same code on desktop and mobile — works identically on both.
   var WHITELIST = ['set', 'length', 'backrests', 'benches', 'finish', 'material'];
   var iframe = document.getElementById('zw-config-iframe-{{ section.id }}');
   if (!iframe) return;
-  try {
-    var url = new URL(location.href);
-    var picked = [];
-    WHITELIST.forEach(function (k) {
-      var v = url.searchParams.get(k);
-      if (v != null && v !== '') picked.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
-    });
-    if (!picked.length) return;  // no params → keep the default src
-    var base = iframe.getAttribute('data-zw-base') || iframe.src.split('?')[0];
-    iframe.src = base + '?' + picked.join('&');
-  } catch (e) { /* keep default src */ }
+
+  function setSrcOnce() {
+    if (iframe.dataset.zwLoaded === '1') return;
+    iframe.dataset.zwLoaded = '1';
+
+    var base = iframe.getAttribute('data-zw-base') || '';
+    var defaultQs = iframe.getAttribute('data-zw-default-qs') || '';
+    var finalSrc = base + defaultQs;
+
+    try {
+      var url = new URL(location.href);
+      var picked = [];
+      WHITELIST.forEach(function (k) {
+        var v = url.searchParams.get(k);
+        if (v != null && v !== '') {
+          picked.push(encodeURIComponent(k) + '=' + encodeURIComponent(v));
+        }
+      });
+      if (picked.length) finalSrc = base + '?' + picked.join('&');
+    } catch (e) {
+      // keep defaultQs
+    }
+    iframe.src = finalSrc;
+  }
+
+  // Run as soon as possible — usually immediately, since this script sits
+  // right after the iframe in the DOM.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setSrcOnce, { once: true });
+  } else {
+    setSrcOnce();
+  }
 })();
 </script>
 
