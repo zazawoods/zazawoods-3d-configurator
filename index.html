@@ -175,7 +175,7 @@
     background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow);
     display:flex; align-items:center; justify-content:center; flex: none;
   }
-  .acc-icon svg { width: 24px; height: 24px; stroke: var(--text); fill: none; stroke-width: 1.4; }
+  .acc-icon svg { stroke: var(--text); fill: none; color: var(--text); }
   .acc-icon .step-num { font-size: 15px; font-weight: 700; color: var(--text); line-height: 1; }
   .acc.locked > .acc-head { opacity: .42; pointer-events: none; cursor: default; }
   .acc.locked > .acc-body { display: none !important; }
@@ -272,10 +272,10 @@
     padding: 6px 4px 10px; gap: 10px;
   }
   .total-row .lbl { font-size: 13px; line-height: 1.3; }
-  .total-row .lbl-sub { display: block; font-size: 10.5px; font-weight: 500; color: var(--accent); margin-top: 1px; }
+  .total-row .lbl-sub { display: block; font-size: 10.5px; font-weight: 500; color: var(--text-muted); margin-top: 1px; }
   .total-row .val { font-size: 20px; font-weight: 600; white-space: nowrap; }
   .cta {
-    width: 100%; padding: 13px; border: none;
+    width: auto; margin-left: auto; padding: 12px 28px; border: none;
     background: var(--accent); color: #fff;
     font-size: 15px; font-weight: 600; letter-spacing: .3px;
     border-radius: 10px; cursor: pointer;
@@ -379,7 +379,7 @@
       <!-- 1. Abmessung -->
       <div class="acc open" data-acc="length" id="acc-length">
         <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">1</span></div>
+          <div class="acc-icon"><svg width="26" height="16" viewBox="0 0 28 18" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="2" y1="9" x2="26" y2="9"/><line x1="2" y1="5" x2="2" y2="13"/><line x1="26" y1="5" x2="26" y2="13"/></svg></div>
           <div class="acc-title"><b>Abmessung</b><span id="sub-length">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -392,7 +392,7 @@
       <!-- 2. Gestell -->
       <div class="acc open" data-acc="model" id="acc-set">
         <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">2</span></div>
+          <div class="acc-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="6" x2="4" y2="19"/><line x1="10" y1="6" x2="8.5" y2="19"/><line x1="14" y1="6" x2="15.5" y2="19"/><line x1="18" y1="6" x2="20" y2="19"/></svg></div>
           <div class="acc-title"><b>Gestell</b><span id="sub-set">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -404,7 +404,7 @@
       <!-- 3. Sitzbank (U / X only) -->
       <div class="acc open hidden" data-acc="bench" id="acc-bench">
         <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">3</span></div>
+          <div class="acc-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" y1="13" x2="20" y2="13"/><line x1="6" y1="13" x2="6" y2="19"/><line x1="18" y1="13" x2="18" y2="19"/><line x1="17" y1="5" x2="17" y2="13"/></svg></div>
           <div class="acc-title"><b>Sitzbank</b><span id="sub-bench">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
@@ -416,7 +416,7 @@
       <!-- 3. Rückenlehne (W only) -->
       <div class="acc open" data-acc="backrest" id="acc-backrest">
         <div class="acc-head">
-          <div class="acc-icon"><span class="step-num">3</span></div>
+          <div class="acc-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="4" y1="13" x2="20" y2="13"/><line x1="6" y1="13" x2="6" y2="19"/><line x1="18" y1="13" x2="18" y2="19"/><line x1="17" y1="5" x2="17" y2="13"/></svg></div>
           <div class="acc-title"><b>Rückenlehne</b><span id="sub-backrest">–</span></div>
           <svg class="acc-arrow" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
