@@ -3,10 +3,12 @@
 //  - accepts AR model uploads and serves them back at a real https URL,
 //    so Android Scene Viewer / iOS Quick Look can fetch them for native AR.
 const express = require('express');
+const compression = require('compression');
 const path = require('path');
 const crypto = require('crypto');
 
 const app = express();
+app.use(compression());
 const PORT = process.env.PORT || 3000;
 
 // ---------------- Baseline security headers ----------------
@@ -105,7 +107,14 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname), {
   index: 'index.html',
   dotfiles: 'deny',
-  setHeaders: (res, p) => { if (p.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache'); }
+  setHeaders: (res, p) => {
+    if (/\.(?:html?|js|mjs|css|json)$/i.test(p)) {
+      res.setHeader('Cache-Control', 'no-cache');
+    } else {
+      // GLB models / textures / images: safe to cache long
+      res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    }
+  }
 }));
 
 // Periodic cleanup of expired uploads

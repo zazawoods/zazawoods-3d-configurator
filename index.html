@@ -14,7 +14,7 @@
     --text: #1A1A1A;
     --text-muted: #6B6B6B;    /* bogade muted text */
     --accent: #C8965A;        /* bogade ochre accent (rgb 200,150,90) */
-    --accent-strong: #B07F45; /* darker accent for hover */
+    --accent-strong: #B5843F; /* darker accent for hover — same token as the Esstisch configurator */
     --accent-soft: #FDF8F2;   /* bogade selected-card peach */
     --border: #E8E6E1;        /* bogade borders & dividers */
     --shadow: 0 1px 3px rgba(0,0,0,0.06);  /* bogade soft shadow for round controls */
@@ -1711,6 +1711,9 @@ loadFallbackWood().then(() => {
   // as the user clicks Material (buildMaterialChips), so it runs in parallel
   // while the user picks length & gestell.
   fetch('angle.glb', { cache: 'force-cache' }).catch(() => {});
+  // Warm the big picknick.glb as well — starts ~4s later so it never competes
+  // with the first paint; by the time the user opens Material it's cached.
+  setTimeout(() => { fetch('picknick.glb', { cache: 'force-cache' }).catch(() => {}); }, 4000);
 });
 
 // ============================ DIMENSIONS OVERLAY ============================
